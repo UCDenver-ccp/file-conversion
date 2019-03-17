@@ -1,0 +1,189 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>edu.ucdenver.ccp</groupId>
+	<artifactId>file-conversion</artifactId>
+	<version>0.1-SNAPSHOT</version>
+
+
+
+
+	<dependencies>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<scope>provided</scope>
+			<version>1.16.6</version>
+		</dependency>
+		<dependency>
+			<groupId>edu.ucdenver.ccp</groupId>
+			<artifactId>ccp-nlp-core</artifactId>
+			<version>3.5.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>edu.ucdenver.ccp</groupId>
+			<artifactId>ccp-nlp-uima</artifactId>
+			<version>3.5.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.8.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-corpus</artifactId>
+			<version>2.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-type-system</artifactId>
+			<version>2.0.0</version>
+		</dependency>
+
+
+		<!-- The following libraries are used for the constituency-to-dependency 
+			parse conversion -->
+		<dependency>
+			<groupId>edu.emory.clir</groupId>
+			<artifactId>clearnlp</artifactId>
+			<version>3.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>edu.emory.clir</groupId>
+			<artifactId>clearnlp-dictionary</artifactId>
+			<version>3.2</version>
+		</dependency>
+		<!-- the head rule files are available in the jar below in edu.emory.mathcs.nlp.conversion -->
+		<dependency>
+			<groupId>edu.emory.mathcs.nlp</groupId>
+			<artifactId>nlp4j-api</artifactId>
+			<version>1.1.3</version>
+		</dependency>
+
+
+
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.2</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<!-- Currently, the jaxb-maven plugin is used to auto-generate classes 
+					for the DrugBank XML parser -->
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>jaxb2-maven-plugin</artifactId>
+				<version>1.6</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<id>knowtator2-xjc</id>
+						<goals>
+							<goal>xjc</goal>
+						</goals>
+						<configuration>
+							<schemaFiles>knowtator2.xsd</schemaFiles>
+							<packageName>edu.ucdenver.ccp.knowtator2</packageName>
+						</configuration>
+					</execution>
+					<execution>
+						<phase>generate-sources</phase>
+						<id>knowtator-xjc</id>
+						<goals>
+							<goal>xjc</goal>
+						</goals>
+						<configuration>
+							<schemaFiles>knowtator.xsd</schemaFiles>
+							<packageName>edu.ucdenver.ccp.knowtator</packageName>
+							<clearOutputDir>false</clearOutputDir>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- specify the java version -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<!-- create a source jar file -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.1.2</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- javadoc -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.3</version>
+				<configuration>
+					<failOnError>false</failOnError>
+					<notimestamp>true</notimestamp>
+					<linksource>true</linksource>
+					<links>
+						<link>http://docs.oracle.com/javase/8/docs/api/</link>
+						<link>http://junit.sourceforge.net/javadoc/</link>
+					</links>
+				</configuration>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>license-maven-plugin</artifactId>
+				<version>1.7</version>
+				<configuration>
+					<verbose>false</verbose>
+					<encoding>UTF-8</encoding>
+					<inceptionYear>2012</inceptionYear>
+					<organizationName>Regents of the University of Colorado</organizationName>
+					<projectName>Colorado Computational Pharmacology's file conversion
+						project</projectName>
+					<licenseName>bsd_3</licenseName>
+				</configuration>
+				<executions>
+					<execution>
+						<id>first</id>
+						<goals>
+							<goal>update-file-header</goal>
+						</goals>
+						<phase>process-sources</phase>
+						<configuration>
+							<roots>
+								<root>src/main/java</root>
+								<root>src/test/java</root>
+							</roots>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

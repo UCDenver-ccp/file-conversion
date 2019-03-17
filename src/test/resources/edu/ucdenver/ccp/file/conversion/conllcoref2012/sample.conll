@@ -1,0 +1,46 @@
+#begin document (wb/eng/00/eng_0014); part 000
+wb/eng/00/eng_0014          0          0         ``         ``    (TOP(S*          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0          1      Thank        VBP       (VP*      thank         01          -         __          *       (V*)          *          -
+wb/eng/00/eng_0014          0          2        God        NNP      (NP*)          -          -          -         __          *    (ARG1*)          *          -
+wb/eng/00/eng_0014          0          3          I        PRP (SBAR(S(NP*)          -          -          -         __          *     (ARG2*    (ARG1*)        (4)
+wb/eng/00/eng_0014          0          4         'm        VBP       (VP*         be         01          1         __          *          *       (V*)          -
+wb/eng/00/eng_0014          0          5         an         DT       (NP*          -          -          -         __          *          *     (ARG2*          -
+wb/eng/00/eng_0014          0          6    atheist         NN     *)))))          -          -          -         __          *         *)         *)          -
+wb/eng/00/eng_0014          0          7          :          :          *          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0          8         ''         ''        *))          -          -          -         __          *          *          *          -
+
+wb/eng/00/eng_0014          0          0        The         DT (TOP(NP(NP*          -          -          -         __          *          -
+wb/eng/00/eng_0014          0          1 surrealistic         JJ          *          -          -          -         __          *          -
+wb/eng/00/eng_0014          0          2     cinema         NN         *)          -          -          -         __          *          -
+wb/eng/00/eng_0014          0          3         of         IN       (PP*          -          -          -         __          *          -
+wb/eng/00/eng_0014          0          4       Luis        NNP       (NP*          -          -          -         __   (PERSON*         (4
+wb/eng/00/eng_0014          0          5     Bunuel        NNP        *))          -          -          -         __         *)         4)
+wb/eng/00/eng_0014          0          6         --          :        *))          -          -          -         __          *          -
+
+wb/eng/00/eng_0014          0          0         by         IN   (TOP(PP*          -          -          -         __          *          -
+wb/eng/00/eng_0014          0          1      Bryan        NNP       (NP*          -          -          -         __   (PERSON*          -
+wb/eng/00/eng_0014          0          2         M.        NNP          *          -          -          -         __          *          -
+wb/eng/00/eng_0014          0          3    Papciak        NNP       *)))          -          -          -         __         *)          -
+
+wb/eng/00/eng_0014          0          0         ``         `` (TOP(SINV*          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0          1        The         DT  (S(NP(NP*          -          -          -         __          *     (ARG1*     (ARG1*          -
+wb/eng/00/eng_0014          0          2    thought         NN         *)          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0          3         of         IN       (PP*          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0          4      death         NN    (NP*)))          -          -          -         __          *         *)          *          -
+wb/eng/00/eng_0014          0          5        has        VBZ       (VP*          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0          6       been        VBN       (VP*         be         01          1         __          *       (V*)          *          -
+wb/eng/00/eng_0014          0          7   familiar         JJ     (ADJP*          -          -          -         __          *     (ARG2*          *          -
+wb/eng/00/eng_0014          0          8         to         IN       (PP*          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0          9         me        PRP    (NP*)))          -          -          -         __          *         *)          *        (4)
+wb/eng/00/eng_0014          0         10        for         IN       (PP*          -          -          -         __          * (ARGM-TMP*          *          -
+wb/eng/00/eng_0014          0         11          a         DT       (NP*          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0         12       long         JJ          *          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0         13       time         NN     *)))))          -          -          -         __          *         *)         *)          -
+wb/eng/00/eng_0014          0         14          ,          ,          *          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0         15         ''         ''          *          -          -          -         __          *          *          *          -
+wb/eng/00/eng_0014          0         16       says        VBZ      (VP*)        say         01          1         __          *          *       (V*)          -
+wb/eng/00/eng_0014          0         17   Director        NNP       (NP*          -          -          -         __          *          *     (ARG0*         (4
+wb/eng/00/eng_0014          0         18       Luis        NNP          *          -          -          -         __   (PERSON*          *          *          -
+wb/eng/00/eng_0014          0         19     Bunuel        NNP         *)          -          -          -         __         *)          *         *)         4)
+wb/eng/00/eng_0014          0         20          .          .        *))          -          -          -         __          *          *          *          -
+
