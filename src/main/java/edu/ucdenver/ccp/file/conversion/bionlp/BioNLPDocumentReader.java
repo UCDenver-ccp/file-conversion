@@ -47,6 +47,7 @@ import java.util.regex.Pattern;
 import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.file.reader.StreamLineIterator;
 import edu.ucdenver.ccp.common.io.StreamUtil;
+import edu.ucdenver.ccp.common.string.RegExPatterns;
 import edu.ucdenver.ccp.file.conversion.DocumentReader;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
@@ -56,6 +57,23 @@ import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationUtil;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultClassMention;
 
 public class BioNLPDocumentReader extends DocumentReader {
+	/**
+	 * The BioNLP format does not support spaces in annotation and relation
+	 * types, so any spaces in an annotation or relation type must be replaced.
+	 * This constant is used as a replacement in the BioNLP format documents
+	 * created by this DocumentWriter.
+	 */
+	private final String spacePlaceholder;
+
+	public BioNLPDocumentReader(String spacePlaceholder) {
+		super();
+		this.spacePlaceholder = spacePlaceholder;
+	}
+
+	public BioNLPDocumentReader() {
+		super();
+		this.spacePlaceholder = BioNLPDocumentWriter.SPACE_PLACEHOLDER;
+	}
 
 	public static final String THEME_ID_SLOT_NAME = "theme id";
 
@@ -94,6 +112,12 @@ public class BioNLPDocumentReader extends DocumentReader {
 				Matcher m = p.matcher(toks[1]);
 				if (m.find()) {
 					String relationType = m.group(1);
+
+					if (spacePlaceholder != null) {
+						relationType = relationType.replaceAll(RegExPatterns.escapeCharacterForRegEx(spacePlaceholder),
+								" ");
+					}
+
 					String annotId1 = m.group(2);
 					String annotId2 = m.group(3);
 
@@ -122,6 +146,10 @@ public class BioNLPDocumentReader extends DocumentReader {
 				String annotId = toks[0];
 
 				String annotType = toks[1].substring(0, toks[1].indexOf(" "));
+				/* replace all spaceHolders in annotation type with spaces */
+				if (spacePlaceholder != null) {
+					annotType = annotType.replaceAll(RegExPatterns.escapeCharacterForRegEx(spacePlaceholder), " ");
+				}
 				String spanStr = toks[1].substring(toks[1].indexOf(" ") + 1);
 
 				TextAnnotation ta = null;

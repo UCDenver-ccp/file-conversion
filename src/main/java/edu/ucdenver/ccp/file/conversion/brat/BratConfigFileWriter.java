@@ -61,6 +61,7 @@ import edu.ucdenver.ccp.common.file.FileWriterUtil;
 import edu.ucdenver.ccp.common.string.StringUtil;
 import edu.ucdenver.ccp.datasource.fileparsers.obo.OntologyUtil;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
+import edu.ucdenver.ccp.file.conversion.bionlp.BioNLPDocumentWriter;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.mention.ComplexSlotMention;
 
@@ -74,8 +75,17 @@ public class BratConfigFileWriter {
 
 	private static final String OBO_PURL = "http://purl.obolibrary.org/obo/";
 
+	private static final String DEFAULT_SPACE_PLACEHOLDER = BioNLPDocumentWriter.SPACE_PLACEHOLDER;
+
 	public static void createConfFiles(File annotationFileDirectory, List<File> ontologyFiles,
 			CharacterEncoding encoding, Map<String, String> conceptTypeToColorMap)
+			throws IOException, OWLOntologyCreationException {
+		createConfFiles(annotationFileDirectory, ontologyFiles, encoding, conceptTypeToColorMap,
+				DEFAULT_SPACE_PLACEHOLDER);
+	}
+
+	public static void createConfFiles(File annotationFileDirectory, List<File> ontologyFiles,
+			CharacterEncoding encoding, Map<String, String> conceptTypeToColorMap, String spacePlaceholder)
 			throws IOException, OWLOntologyCreationException {
 		File annotationConfFile = new File(annotationFileDirectory, "annotation.conf");
 		File visualConfFile = new File(annotationFileDirectory, "visual.conf");
@@ -90,11 +100,39 @@ public class BratConfigFileWriter {
 			TextDocument td = new BratDocumentReader().readDocument("sourceid", "sourcedb", inputFile, documentTextFile,
 					encoding);
 			for (TextAnnotation annot : td.getAnnotations()) {
-				annotTypes.add(OBO_PURL + annot.getClassMention().getMentionName().replace(":", "_"));
+
+				/*
+				 * this code is complicated b/c CRAFT doesn't use fully
+				 * qualifies URLs for the concept annotation types and instead
+				 * just uses the identifier without the namespace, e.g.
+				 * CL_0000000. The code below tries to predict if the annotation
+				 * type is an ontology concept or not and treats the two cases
+				 * separately.
+				 */
+				String annotType = annot.getClassMention().getMentionName();
+				if (annotType.matches("\\w+:\\d+")) {
+					annotType = OBO_PURL + annotType.replace(":", "_");
+					annotTypes.add(annotType);
+				} else {
+					/*
+					 * replace spaces in the annotation types with the
+					 * spacePlaceholder b/c the brat format does not handle
+					 * spaces in annotation and relation types
+					 */
+					annotType = annotType.replaceAll(" ", spacePlaceholder);
+					annotTypes.add(annotType);
+				}
 				Collection<ComplexSlotMention> csms = annot.getClassMention().getComplexSlotMentions();
 				if (csms != null && !csms.isEmpty()) {
 					for (ComplexSlotMention csm : csms) {
-						relationTypes.add(csm.getMentionName());
+						String relationType = csm.getMentionName();
+						/*
+						 * replace spaces in the annotation types with the
+						 * spacePlaceholder b/c the brat format does not handle
+						 * spaces in annotation and relation types
+						 */
+						relationType = relationType.replaceAll(" ", spacePlaceholder);
+						relationTypes.add(relationType);
 					}
 				}
 			}
@@ -122,6 +160,16 @@ public class BratConfigFileWriter {
 			}
 		}
 
+		/*
+		 * add non-ontology types to the typeToLabelMap with their label simply
+		 * being the same as the type
+		 */
+		for (String annotType : annotTypes) {
+			if (!annotType.startsWith(OBO_PURL)) {
+				typeToLabelMap.put(annotType, annotType);
+			}
+		}
+
 		createAnnotationConfFile(annotationConfFile, annotTypes, relationTypes, encoding);
 		createVisualConfFile(visualConfFile, typeToLabelMap, conceptTypeToColorMap, encoding);
 
@@ -133,15 +181,24 @@ public class BratConfigFileWriter {
 		sb.append("[drawing]\n");
 		Map<String, String> sortedMap = CollectionsUtil.sortMapByKeys(typeToLabelMap, SortOrder.ASCENDING);
 		for (Entry<String, String> entry : sortedMap.entrySet()) {
-			String id = StringUtil.removePrefix(entry.getKey(), OBO_PURL).replace("_", ":");
-			String idPrefix = id.substring(0, id.indexOf(":"));
-			String color = conceptTypeToColorMap.get(idPrefix);
+			String id = entry.getKey();
+			String color = "bgColor:#47e542";
+			if (id.startsWith(OBO_PURL)) {
+				id = StringUtil.removePrefix(entry.getKey(), OBO_PURL).replace("_", ":");
+				String idPrefix = id.substring(0, id.indexOf(":"));
+				if (conceptTypeToColorMap.containsKey(idPrefix)) {
+					color = conceptTypeToColorMap.get(idPrefix);
+				}
+			}
 			sb.append(id + "\t" + color + "\n");
 		}
 
 		sb.append("[labels]\n");
 		for (Entry<String, String> entry : sortedMap.entrySet()) {
-			String id = StringUtil.removePrefix(entry.getKey(), OBO_PURL).replace("_", ":");
+			String id = entry.getKey();
+			if (id.startsWith(OBO_PURL)) {
+				id = StringUtil.removePrefix(entry.getKey(), OBO_PURL).replace("_", ":");
+			}
 			sb.append(id + " | " + entry.getValue() + "\n");
 		}
 
@@ -155,7 +212,10 @@ public class BratConfigFileWriter {
 		List<String> sortedAnnotTypes = new ArrayList<String>(annotTypes);
 		Collections.sort(sortedAnnotTypes);
 		for (String type : sortedAnnotTypes) {
-			sb.append(StringUtil.removePrefix(type, OBO_PURL).replace("_", ":") + "\n");
+			if (type.startsWith(OBO_PURL)) {
+				type = StringUtil.removePrefix(type, OBO_PURL).replace("_", ":");
+			}
+			sb.append(type + "\n");
 		}
 		sb.append("[attributes]\n");
 		sb.append("[relations]\n");

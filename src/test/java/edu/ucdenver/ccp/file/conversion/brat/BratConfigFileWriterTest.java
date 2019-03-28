@@ -78,17 +78,17 @@ public class BratConfigFileWriterTest {
 
 		TextAnnotationFactory factory = TextAnnotationFactory.createFactoryWithDefaults();
 		List<TextAnnotation> annotations = new ArrayList<TextAnnotation>();
-		annotations.add(factory.createAnnotation(0, 5, "BRCA2", new DefaultClassMention("CHEBI_12345")));
-		TextAnnotation ppardAnnot1 = factory.createAnnotation(55, 60, "PPARD", new DefaultClassMention("PR_12345"));
+		annotations.add(factory.createAnnotation(0, 5, "BRCA2", new DefaultClassMention("CHEBI:12345")));
+		TextAnnotation ppardAnnot1 = factory.createAnnotation(55, 60, "PPARD", new DefaultClassMention("PR:12345"));
 		annotations.add(ppardAnnot1);
 
 		TextAnnotation ppardAnnot2 = factory.createAnnotation(100, 104, "PPAR gamma",
-				new DefaultClassMention("PR_12345"));
+				new DefaultClassMention("PR:12345"));
 		ppardAnnot2.addSpan(new Span(115, 120));
 		annotations.add(ppardAnnot2);
 
 		/* link the PPARD annotations with a relation (type = identity chain) */
-		String relationType = "related";
+		String relationType = "related to";
 		ComplexSlotMention csm = new DefaultComplexSlotMention(relationType);
 		csm.addClassMention(ppardAnnot2.getClassMention());
 		ppardAnnot1.getClassMention().addComplexSlotMention(csm);
@@ -104,8 +104,8 @@ public class BratConfigFileWriterTest {
 
 		new BratDocumentWriter().serialize(td, annotFile, encoding);
 
-		String expectedSerializedAnnotations = ("T1\tCHEBI_12345 0 5\tBRCA2\n" + "T2\tPR_12345 55 60\tPPARD\n"
-				+ "T3\tPR_12345 100 104;115 120\tPPAR gamma\n" + "R1\t" + relationType + " Arg1:T2 Arg2:T3\n");
+		String expectedSerializedAnnotations = ("T1\tCHEBI:12345 0 5\tBRCA2\n" + "T2\tPR:12345 55 60\tPPARD\n"
+				+ "T3\tPR:12345 100 104;115 120\tPPAR gamma\n" + "R1\t" + "related^to" + " Arg1:T2 Arg2:T3\n");
 
 		String observedAnnotations = StreamUtil
 				.toString(new InputStreamReader(new FileInputStream(annotFile), encoding.getDecoder()));
@@ -141,7 +141,7 @@ public class BratConfigFileWriterTest {
 		List<String> observedLines = new ArrayList<String>(
 				FileReaderUtil.loadLinesFromFile(annotationConfFile, encoding));
 		List<String> expectedLines = CollectionsUtil.createList("[entities]", "CHEBI:12345", "PR:12345", "[attributes]",
-				"[relations]", "related", "[events]", "");
+				"[relations]", "related^to", "[events]", "");
 
 		assertEquals("lines are not as expected in annotation.conf", expectedLines, observedLines);
 

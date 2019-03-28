@@ -44,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import edu.ucdenver.ccp.common.collections.CollectionsUtil;
 import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.file.FileWriterUtil;
 import edu.ucdenver.ccp.file.conversion.DocumentWriter;
@@ -59,6 +58,14 @@ import edu.ucdenver.ccp.nlp.core.mention.ComplexSlotMention;
  * for their identifier
  */
 public class BioNLPDocumentWriter extends DocumentWriter {
+
+	/**
+	 * The BioNLP format does not support spaces in annotation and relation
+	 * types, so any spaces in an annotation or relation type must be replaced.
+	 * This constant is used as a replacement in the BioNLP format documents
+	 * created by this DocumentWriter.
+	 */
+	public static final String SPACE_PLACEHOLDER = "^";
 
 	@Override
 	public void serialize(TextDocument td, OutputStream outputStream, CharacterEncoding encoding) throws IOException {
@@ -82,14 +89,12 @@ public class BioNLPDocumentWriter extends DocumentWriter {
 					for (ComplexSlotMention csm : csms) {
 						String relationType = csm.getMentionName();
 						String sourceAnnotId = entry.getValue();
-						/*
-						 * there should only be a single ClassMention here --
-						 * Exception is thrown if > 1 are observed
-						 */
-						ClassMention cm = CollectionsUtil.getSingleElement(csm.getClassMentions());
-						String targetAnnotId = annotToIdMap.get(cm.getTextAnnotation());
-						String relationId = "R" + rIndex++;
-						writer.write(serializeRelation(relationId, relationType, sourceAnnotId, targetAnnotId) + "\n");
+						for (ClassMention cm : csm.getClassMentions()) {
+							String targetAnnotId = annotToIdMap.get(cm.getTextAnnotation());
+							String relationId = "R" + rIndex++;
+							writer.write(
+									serializeRelation(relationId, relationType, sourceAnnotId, targetAnnotId) + "\n");
+						}
 					}
 				}
 			}
@@ -99,7 +104,13 @@ public class BioNLPDocumentWriter extends DocumentWriter {
 	private static String serializeAnnotation(TextAnnotation ta, String annotId) {
 		StringBuffer sb = new StringBuffer();
 		sb.append(annotId + "\t");
-		sb.append(ta.getClassMention().getMentionName() + " ");
+		String annotType = ta.getClassMention().getMentionName();
+		/*
+		 * BioNLP format does not support spaces in the annotation type, so
+		 * replace all spaces in annotType with SPACE_PLACEHOLDER
+		 */
+		annotType = annotType.replaceAll(" ", SPACE_PLACEHOLDER);
+		sb.append(annotType + " ");
 		for (int i = 0; i < ta.getSpans().size(); i++) {
 			Span span = ta.getSpans().get(i);
 			sb.append(((i > 0) ? ";" : "") + span.getSpanStart() + " " + span.getSpanEnd());
@@ -113,7 +124,9 @@ public class BioNLPDocumentWriter extends DocumentWriter {
 			String targetAnnotId) {
 		StringBuffer sb = new StringBuffer();
 		sb.append(relationId + "\t");
-		sb.append(relationType + " Arg1:" + sourceAnnotId + " Arg2:" + targetAnnotId);
+		sb.append(
+				relationType.replaceAll(" ", SPACE_PLACEHOLDER) + " Arg1:" + sourceAnnotId + " Arg2:" + targetAnnotId);
+		
 		return sb.toString();
 	}
 

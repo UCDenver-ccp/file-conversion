@@ -33,16 +33,18 @@ package edu.ucdenver.ccp.file.conversion.bionlp;
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
+import static org.junit.Assert.*;
 
-import static org.junit.Assert.assertEquals;
-
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Test;
 
+import edu.ucdenver.ccp.common.collections.CollectionsUtil;
 import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
@@ -78,8 +80,8 @@ public class BioNLPDocumentWriterTest {
 				+ "T3\tGene 100 104;115 120\tPPAR gamma\n");// .replaceAll("\\n",
 															// " ");
 
-		System.out.println("SER:\n" + serializedAnnotations + ";;;");
-		System.out.println("EXP:\n" + expectedSerializedAnnotations + ";;;");
+		// System.out.println("SER:\n" + serializedAnnotations + ";;;");
+		// System.out.println("EXP:\n" + expectedSerializedAnnotations + ";;;");
 
 		assertEquals("annotations in serialized BioNLP format not as expected", expectedSerializedAnnotations,
 				serializedAnnotations);
@@ -116,6 +118,68 @@ public class BioNLPDocumentWriterTest {
 
 		assertEquals("annotations in serialized BioNLP format not as expected", expectedSerializedAnnotations,
 				serializedAnnotations);
+
+	}
+
+	/**
+	 * the BioNLP format does not support spaces in annotation types, this test
+	 * does a round-trip to make sure we handle spaces in annotation and
+	 * relation types appropriately.
+	 * 
+	 * @throws IOException
+	 */
+	@Test
+	public void testBioNLPAnotationSerialization_withRelation_WithSpacesInTypes() throws IOException {
+		CharacterEncoding encoding = CharacterEncoding.UTF_8;
+		String spaceReplacement = BioNLPDocumentWriter.SPACE_PLACEHOLDER;
+		TextAnnotationFactory factory = TextAnnotationFactory.createFactoryWithDefaults();
+		List<TextAnnotation> annotations = new ArrayList<TextAnnotation>();
+		annotations.add(factory.createAnnotation(0, 5, "BRCA2", new DefaultClassMention("Protein mention")));
+		TextAnnotation ppardAnnot1 = factory.createAnnotation(55, 60, "PPARD", new DefaultClassMention("Gene mention"));
+		annotations.add(ppardAnnot1);
+
+		TextAnnotation ppardAnnot2 = factory.createAnnotation(100, 104, "PPAR gamma",
+				new DefaultClassMention("Gene mention"));
+		ppardAnnot2.addSpan(new Span(115, 120));
+		annotations.add(ppardAnnot2);
+
+		/* link the PPARD annotations with a relation (type = identity chain) */
+		String relationType = "related to";
+		ComplexSlotMention csm = new DefaultComplexSlotMention(relationType);
+		csm.addClassMention(ppardAnnot2.getClassMention());
+		ppardAnnot1.getClassMention().addComplexSlotMention(csm);
+
+		TextDocument td = new TextDocument("12345", "PMC", "this is where the document text goes");
+		td.setAnnotations(annotations);
+
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		new BioNLPDocumentWriter().serialize(td, outputStream, CharacterEncoding.UTF_8);
+		String serializedAnnotations = outputStream.toString(CharacterEncoding.UTF_8.getCharacterSetName());
+
+		String expectedSerializedAnnotations = ("T1\tProtein" + spaceReplacement + "mention 0 5\tBRCA2\n" + "T2\tGene"
+				+ spaceReplacement + "mention 55 60\tPPARD\n" + "T3\tGene" + spaceReplacement
+				+ "mention 100 104;115 120\tPPAR gamma\n" + "R1\t" + relationType.replace(" ", spaceReplacement)
+				+ " Arg1:T2 Arg2:T3\n");
+
+		assertEquals("annotations in serialized BioNLP format not as expected", expectedSerializedAnnotations,
+				serializedAnnotations);
+
+		String documentText = "BRCA2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx PPARD xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx PPAR xxxxxxxxx gamma xxxxxxxxxxxxxxx.";
+
+		TextDocument td2 = new BioNLPDocumentReader().readDocument("12345", "PMC",
+				new ByteArrayInputStream(serializedAnnotations.getBytes()),
+				new ByteArrayInputStream(documentText.getBytes()), encoding);
+
+		Set<String> expectedTypes = CollectionsUtil.createSet("Protein mention", "Gene mention", "related to");
+
+		/* check that all type names are as expected */
+		for (TextAnnotation ta : td2.getAnnotations()) {
+			String type = ta.getClassMention().getMentionName();
+			assertTrue("did not expect type: " + type, expectedTypes.contains(type));
+			for (String name : ta.getClassMention().getComplexSlotMentionNames()) {
+				assertTrue("did not expect type: " + name, expectedTypes.contains(name));
+			}
+		}
 
 	}
 
