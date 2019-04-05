@@ -314,7 +314,6 @@ public class TreebankFormatParser {
 		int start = node.getTextBegin();
 		int end = node.getTextEnd();
 		String text2 = text.substring(start, end);
-		System.out.println("Node: " + text1 + " Doc: " + text2);
 		if (!text1.equals(text2)) {
 			// TreeBank adds in (. .) nodes in odd places, e.g. when a sentence
 			// ends with U.S. (and no final period). As a result, we need to
