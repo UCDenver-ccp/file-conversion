@@ -71,10 +71,14 @@ import edu.ucdenver.ccp.knowtator.Mention;
 import edu.ucdenver.ccp.knowtator.MentionClass;
 import edu.ucdenver.ccp.knowtator.MentionSlot;
 import edu.ucdenver.ccp.knowtator.Span;
+import edu.ucdenver.ccp.knowtator.StringSlotMention;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationFactory;
+import edu.ucdenver.ccp.nlp.core.mention.PrimitiveSlotMention;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultClassMention;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultComplexSlotMention;
+import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultPrimitiveSlotMentionFactory;
+import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultStringSlotMention;
 
 public class KnowtatorDocumentReader extends DocumentReader {
 
@@ -114,6 +118,7 @@ public class KnowtatorDocumentReader extends DocumentReader {
 
 		Map<String, DefaultClassMention> cmIdToCmMap = new HashMap<String, DefaultClassMention>();
 		Map<String, DefaultComplexSlotMention> csmIdToCsmMap = new HashMap<String, DefaultComplexSlotMention>();
+		Map<String, DefaultStringSlotMention> ssmIdToSsmMap = new HashMap<String, DefaultStringSlotMention>();
 
 		while (xmlfer.peek() != null) {
 			JAXBElement<?> unmarshalledElement = um.unmarshal(xmler, entryClass);
@@ -122,7 +127,7 @@ public class KnowtatorDocumentReader extends DocumentReader {
 			if (Annotations.class.isInstance(o)) {
 				Annotations a = (Annotations) o;
 
-				for (Object mention : a.getClassMentionOrComplexSlotMention()) {
+				for (Object mention : a.getClassMentionOrComplexSlotMentionOrStringSlotMention()) {
 					if (ComplexSlotMention.class.isInstance(mention)) {
 						ComplexSlotMention csm = (ComplexSlotMention) mention;
 						List<ComplexSlotMentionValue> complexSlotMentionValues = csm.getComplexSlotMentionValue();
@@ -135,9 +140,15 @@ public class KnowtatorDocumentReader extends DocumentReader {
 							String value = csmv.getValue();
 							CollectionsUtil.addToOne2ManyUniqueMap(id, value, csmIdToValueMap);
 						}
-					}
-
-					if (ClassMention.class.isInstance(mention)) {
+					} else if (StringSlotMention.class.isInstance(mention)) {
+						StringSlotMention ssm = (StringSlotMention) mention;
+						String id = ssm.getId();
+						String slotName = ssm.getMentionSlot().getId();
+						String slotValue = ssm.getStringSlotMentionValue().getValue();
+						DefaultStringSlotMention dssm = new DefaultStringSlotMention(slotName);
+						dssm.addSlotValue(slotValue);
+						ssmIdToSsmMap.put(id, dssm);
+					} else if (ClassMention.class.isInstance(mention)) {
 						ClassMention cm = (ClassMention) mention;
 						String id = cm.getId();
 						MentionClass mentionClass = cm.getMentionClass();
@@ -151,27 +162,32 @@ public class KnowtatorDocumentReader extends DocumentReader {
 							String id3 = hsm.getId();
 							CollectionsUtil.addToOne2ManyUniqueMap(id, id3, cmIdToValueMap);
 						}
+					} else {
+						throw new IllegalArgumentException(
+								"Unhandled slot mention type: " + mention.getClass().getName());
 					}
 				}
 
 				/* add CMs to CSMs as slot values */
 				for (Entry<String, Set<String>> entry : csmIdToValueMap.entrySet()) {
 					DefaultComplexSlotMention dcsm = csmIdToCsmMap.get(entry.getKey());
-					if (dcsm == null) {
-						System.out.println("Null DCSM for " + entry.getKey());
-					}
 					for (String cmId : entry.getValue()) {
 						DefaultClassMention dcm = cmIdToCmMap.get(cmId);
 						dcsm.addClassMention(dcm);
 					}
 				}
 
-				/* add CSMs as slots to CMs */
+				/* add CSMs and SSMs as slots to CMs */
 				for (Entry<String, Set<String>> entry : cmIdToValueMap.entrySet()) {
 					DefaultClassMention dcm = cmIdToCmMap.get(entry.getKey());
-					for (String csmId : entry.getValue()) {
-						DefaultComplexSlotMention dcsm = csmIdToCsmMap.get(csmId);
+					for (String csmOrSsmId : entry.getValue()) {
+						if (csmIdToCsmMap.containsKey(csmOrSsmId)) {
+						DefaultComplexSlotMention dcsm = csmIdToCsmMap.get(csmOrSsmId);
 						dcm.addComplexSlotMention(dcsm);
+						} else {
+							DefaultStringSlotMention dssm = ssmIdToSsmMap.get(csmOrSsmId);
+							dcm.addPrimitiveSlotMention(dssm);
+						}
 					}
 				}
 

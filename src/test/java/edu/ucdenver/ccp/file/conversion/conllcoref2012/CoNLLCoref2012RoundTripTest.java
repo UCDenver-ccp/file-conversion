@@ -55,7 +55,6 @@ import edu.ucdenver.ccp.common.file.FileComparisonUtil.ShowWhiteSpace;
 import edu.ucdenver.ccp.common.file.FileReaderUtil;
 import edu.ucdenver.ccp.common.io.ClassPathUtil;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
-import edu.ucdenver.ccp.file.conversion.conllcoref2012.CoNLLCoref2012DocumentWriter.IncludeCorefType;
 
 public class CoNLLCoref2012RoundTripTest {
 
@@ -75,7 +74,7 @@ public class CoNLLCoref2012RoundTripTest {
 		ClassPathUtil.copyClasspathResourceToFile(getClass(), "sample-craft.ident.conll", originalConllFile);
 
 		File roundTrippedConllFile = folder.newFile("roundtrip.conll");
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, roundTrippedConllFile, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, roundTrippedConllFile, encoding);
 
 		List<String> expectedLines = FileReaderUtil.loadLinesFromFile(originalConllFile, encoding);
 		List<String> observedLines = FileReaderUtil.loadLinesFromFile(roundTrippedConllFile, encoding);
@@ -92,7 +91,7 @@ public class CoNLLCoref2012RoundTripTest {
 				encoding);
 
 		File roundTrippedConllFile2 = folder.newFile("roundtrip2.conll");
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, roundTrippedConllFile2, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, roundTrippedConllFile2, encoding);
 
 		expectedLines = FileReaderUtil.loadLinesFromFile(originalConllFile, encoding);
 		observedLines = FileReaderUtil.loadLinesFromFile(roundTrippedConllFile2, encoding);

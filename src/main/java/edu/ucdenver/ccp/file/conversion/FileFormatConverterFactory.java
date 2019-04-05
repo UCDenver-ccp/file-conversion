@@ -58,17 +58,6 @@ import edu.ucdenver.ccp.file.conversion.uima.UimaDocumentWriter;
 
 public class FileFormatConverterFactory {
 
-	// public static final Map<InputFileFormat, Set<OutputFileFormat>>
-	// validInputOutputMap = createValidInputOutputMap();
-	//
-	// private static Map<InputFileFormat, Set<OutputFileFormat>>
-	// createValidInputOutputMap() {
-	// Map<InputFileFormat, Set<OutputFileFormat>> map = new
-	// HashMap<InputFileFormat, Set<OutputFileFormat>>();
-	//
-	// map.put(InputFileFormat.BIONLP, EnumSet.of(OutputFileFormat., ));
-	// }
-
 	public static DocumentReader getReader(InputFileFormat sourceFormat) {
 		switch (sourceFormat) {
 		case BIONLP:
@@ -99,10 +88,8 @@ public class FileFormatConverterFactory {
 			return new BioNLPDocumentWriter();
 		case BRAT:
 			return new BratDocumentWriter();
-		case CONLL_COREF_2012_IDENT:
-			return new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT);
-		case CONLL_COREF_2012_APPOS:
-			return new CoNLLCoref2012DocumentWriter(IncludeCorefType.APPOS);
+		case CONLL_COREF_2012:
+			return new CoNLLCoref2012DocumentWriter();
 		case CONLL_U:
 			return new CoNLLUDocumentWriter();
 		case KNOWTATOR2:

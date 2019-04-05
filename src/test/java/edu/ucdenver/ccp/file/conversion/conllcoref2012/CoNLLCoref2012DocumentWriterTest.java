@@ -42,6 +42,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,12 +62,14 @@ import edu.ucdenver.ccp.common.file.FileComparisonUtil.LineTrim;
 import edu.ucdenver.ccp.common.file.FileComparisonUtil.ShowWhiteSpace;
 import edu.ucdenver.ccp.common.file.FileReaderUtil;
 import edu.ucdenver.ccp.common.io.ClassPathUtil;
+import edu.ucdenver.ccp.common.io.StreamUtil;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
-import edu.ucdenver.ccp.file.conversion.conllcoref2012.CoNLLCoref2012DocumentWriter.IncludeCorefType;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUDocumentWriter;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUFileRecord;
+import edu.ucdenver.ccp.file.conversion.knowtator.KnowtatorDocumentReader;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationFactory;
+import edu.ucdenver.ccp.nlp.core.mention.ClassMention;
 import edu.ucdenver.ccp.nlp.core.mention.ComplexSlotMention;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultClassMention;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultComplexSlotMention;
@@ -112,27 +115,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 		td.addAnnotations(annotations);
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, outputStream, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputStream, encoding);
 		String serializedConllText = outputStream.toString(CharacterEncoding.UTF_8.getCharacterSetName());
-
-		// StringBuffer sb = new StringBuffer();
-		// sb.append(documentId);
-		// sb.append("\t0");
-		// sb.append("\t" + record.getWordIndex());
-		// sb.append("\t" + record.getForm());
-		// sb.append("\t" + record.getUniversalPartOfSpeechTag());
-		// sb.append("\t-");
-		// sb.append("\t-");
-		// sb.append("\t-");
-		// sb.append("\t-");
-		// sb.append("\t-");
-		// sb.append("\t-");
-		// sb.append("\t-");
-		//
-		// String corefInfo = formCorefInfoString(record.getMiscellaneous());
-		// sb.append("\t" + corefInfo);
-		// sb.append("\n");
-		// return sb.toString();
 
 		String expectedConllText = "#begin document (12345); part 000\n"
 				+ "12345\t0\t1\tThe\tDT\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t2\tred\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
@@ -141,8 +125,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
 
-		System.out.println("SER:\n" + serializedConllText + ";;;");
-		System.out.println("EXP:\n" + expectedConllText + ";;;");
+		// System.out.println("SER:\n" + serializedConllText + ";;;");
+		// System.out.println("EXP:\n" + expectedConllText + ";;;");
 
 		assertEquals("annotations in serialized CoNLL-U format not as expected", expectedConllText,
 				serializedConllText);
@@ -187,7 +171,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		td.addAnnotations(annotations);
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, outputStream, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputStream, encoding);
 		String serializedConllText = outputStream.toString(CharacterEncoding.UTF_8.getCharacterSetName());
 
 		String expectedConllText = "#begin document (12345); part 000\n"
@@ -197,8 +181,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
 
-		System.out.println("SER:\n" + serializedConllText + ";;;");
-		System.out.println("EXP:\n" + expectedConllText + ";;;");
+		// System.out.println("SER:\n" + serializedConllText + ";;;");
+		// System.out.println("EXP:\n" + expectedConllText + ";;;");
 
 		assertEquals("annotations in serialized CoNLL-U format not as expected", expectedConllText,
 				serializedConllText);
@@ -206,8 +190,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * Some annotations may have excess leading or trailing whitespace. This
-	 * test checks to see that it is removed.
+	 * Some annotations may have excess leading or trailing whitespace. This test checks to see that
+	 * it is removed.
 	 * 
 	 * @throws IOException
 	 */
@@ -249,7 +233,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		td.addAnnotations(annotations);
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, outputStream, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputStream, encoding);
 		String serializedConllText = outputStream.toString(CharacterEncoding.UTF_8.getCharacterSetName());
 
 		String expectedConllText = "#begin document (12345); part 000\n"
@@ -259,8 +243,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
 
-		System.out.println("SER:\n" + serializedConllText + ";;;");
-		System.out.println("EXP:\n" + expectedConllText + ";;;");
+		// System.out.println("SER:\n" + serializedConllText + ";;;");
+		// System.out.println("EXP:\n" + expectedConllText + ";;;");
 
 		assertEquals("annotations in serialized CoNLL-U format not as expected", expectedConllText,
 				serializedConllText);
@@ -268,10 +252,9 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * sometimes the NP span start might not match a token exactly. In that
-	 * case, we should mark the overlapping token as part of the coref chain in
-	 * the CoNLL coref output format. Example: token = "post-measurement"; coref
-	 * chain member = "measurement"
+	 * sometimes the NP span start might not match a token exactly. In that case, we should mark the
+	 * overlapping token as part of the coref chain in the CoNLL coref output format. Example: token
+	 * = "post-measurement"; coref chain member = "measurement"
 	 * 
 	 * @throws IOException
 	 */
@@ -293,8 +276,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		annotations.add(factory.createAnnotation(13, 24, "It is fast.", new DefaultClassMention("sentence")));
 
 		/*
-		 * to simulate a token mismatch, this chain member annotation is "ar"
-		 * instead of "car"
+		 * to simulate a token mismatch, this chain member annotation is "ar" instead of "car"
 		 */
 		TextAnnotation identChainAnnot = factory.createAnnotation(9, 11, "ar",
 				new DefaultClassMention("Identity Chain"));
@@ -315,7 +297,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		td.addAnnotations(annotations);
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, outputStream, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputStream, encoding);
 		String serializedConllText = outputStream.toString(CharacterEncoding.UTF_8.getCharacterSetName());
 
 		String expectedConllText = "#begin document (12345); part 000\n"
@@ -325,8 +307,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
 
-		System.out.println("SER:\n" + serializedConllText + ";;;");
-		System.out.println("EXP:\n" + expectedConllText + ";;;");
+		// System.out.println("SER:\n" + serializedConllText + ";;;");
+		// System.out.println("EXP:\n" + expectedConllText + ";;;");
 
 		assertEquals("annotations in serialized CoNLL-U format not as expected", expectedConllText,
 				serializedConllText);
@@ -334,10 +316,9 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * sometimes the NP span end might not match a token exactly. In that case,
-	 * we should mark the overlapping token as part of the coref chain in the
-	 * CoNLL coref output format. Example: tokens = "C-terminal peptides"; coref
-	 * chain member = "C-terminal peptide"
+	 * sometimes the NP span end might not match a token exactly. In that case, we should mark the
+	 * overlapping token as part of the coref chain in the CoNLL coref output format. Example:
+	 * tokens = "C-terminal peptides"; coref chain member = "C-terminal peptide"
 	 * 
 	 * @throws IOException
 	 */
@@ -362,8 +343,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 				new DefaultClassMention("Identity Chain"));
 		TextAnnotation carNPAnnot = factory.createAnnotation(8, 11, "car", new DefaultClassMention("Noun Phrase"));
 		/*
-		 * to simulate a token mismatch, this chain member annotation is "I"
-		 * instead of "It"
+		 * to simulate a token mismatch, this chain member annotation is "I" instead of "It"
 		 */
 		TextAnnotation itNPAnnot = factory.createAnnotation(13, 14, "I", new DefaultClassMention("Noun Phrase"));
 
@@ -381,7 +361,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		td.addAnnotations(annotations);
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, outputStream, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputStream, encoding);
 		String serializedConllText = outputStream.toString(CharacterEncoding.UTF_8.getCharacterSetName());
 
 		String expectedConllText = "#begin document (12345); part 000\n"
@@ -391,8 +371,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
 
-		System.out.println("SER:\n" + serializedConllText + ";;;");
-		System.out.println("EXP:\n" + expectedConllText + ";;;");
+		// System.out.println("SER:\n" + serializedConllText + ";;;");
+		// System.out.println("EXP:\n" + expectedConllText + ";;;");
 
 		assertEquals("annotations in serialized CoNLL-U format not as expected", expectedConllText,
 				serializedConllText);
@@ -400,10 +380,9 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * sometimes the NP span end might not match a token exactly. In that case,
-	 * we should mark the overlapping token as part of the coref chain in the
-	 * CoNLL coref output format. Example: tokens = "C-terminal peptides"; coref
-	 * chain member = "C-terminal peptide"
+	 * sometimes the NP span end might not match a token exactly. In that case, we should mark the
+	 * overlapping token as part of the coref chain in the CoNLL coref output format. Example:
+	 * tokens = "C-terminal peptides"; coref chain member = "C-terminal peptide"
 	 * 
 	 * @throws IOException
 	 */
@@ -428,8 +407,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 				new DefaultClassMention("Identity Chain"));
 		TextAnnotation carNPAnnot = factory.createAnnotation(4, 10, "red ca", new DefaultClassMention("Noun Phrase"));
 		/*
-		 * to simulate a token mismatch, this chain member annotation is "I"
-		 * instead of "It"
+		 * to simulate a token mismatch, this chain member annotation is "I" instead of "It"
 		 */
 		TextAnnotation itNPAnnot = factory.createAnnotation(13, 14, "I", new DefaultClassMention("Noun Phrase"));
 
@@ -447,7 +425,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		td.addAnnotations(annotations);
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, outputStream, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputStream, encoding);
 		String serializedConllText = outputStream.toString(CharacterEncoding.UTF_8.getCharacterSetName());
 
 		String expectedConllText = "#begin document (12345); part 000\n"
@@ -457,8 +435,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
 
-		System.out.println("SER:\n" + serializedConllText + ";;;");
-		System.out.println("EXP:\n" + expectedConllText + ";;;");
+		// System.out.println("SER:\n" + serializedConllText + ";;;");
+		// System.out.println("EXP:\n" + expectedConllText + ";;;");
 
 		assertEquals("annotations in serialized CoNLL-U format not as expected", expectedConllText,
 				serializedConllText);
@@ -515,37 +493,37 @@ public class CoNLLCoref2012DocumentWriterTest {
 		String endIndicator = CoNLLCoref2012DocumentWriter.END_STATUS_INDICATOR;
 
 		String misc = "SPAN_0|15;" + startIndicator + "_9";
-		assertEquals("(9", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT));
+		assertEquals("(9", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc));
 
 		misc = "SPAN_0|15;" + endIndicator + "_9";
-		assertEquals("9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT));
+		assertEquals("9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc));
 
 		misc = "SPAN_0|15;" + endIndicator + "_9;" + startIndicator + "_9";
-		assertEquals("(9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT));
+		assertEquals("(9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc));
 
 		misc = "SPAN_0|15;" + endIndicator + "_9;" + startIndicator + "_9;" + startIndicator + "_23";
-		assertEquals("(23|(9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT));
+		assertEquals("(23|(9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc));
 
 		misc = "SPAN_0|15;" + endIndicator + "_9;" + startIndicator + "_9;" + endIndicator + "_23";
-		assertEquals("(9)|23)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT));
+		assertEquals("(9)|23)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc));
 
 		misc = "SPAN_0|15;" + endIndicator + "_9;" + endIndicator + "_23";
-		String corefInfoString = CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT);
+		String corefInfoString = CoNLLCoref2012DocumentWriter.formCorefInfoString(misc);
 		// return order is non-deterministic so check for either case
 		assertTrue(corefInfoString.equals("9)|23)") || corefInfoString.equals("23)|9)"));
 
 		misc = "SPAN_0|15;" + startIndicator + "_23;" + startIndicator + "_9";
-		corefInfoString = CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT);
+		corefInfoString = CoNLLCoref2012DocumentWriter.formCorefInfoString(misc);
 		// return order is non-deterministic so check for either case
 		assertTrue(corefInfoString.equals("(23|(9") || corefInfoString.equals("(9|(23"));
 
 		// multiple ends for same chain on same token
 		misc = "SPAN_0|15;" + endIndicator + "_9;" + startIndicator + "_9;" + endIndicator + "_9";
-		assertEquals("(9)|9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT));
+		assertEquals("(9)|9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc));
 
 		// multiple ends for same chain on same token
 		misc = "SPAN_0|15;" + endIndicator + "_9;" + endIndicator + "_9";
-		assertEquals("9)|9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT));
+		assertEquals("9)|9)", CoNLLCoref2012DocumentWriter.formCorefInfoString(misc));
 	}
 
 	@Test(expected = IllegalStateException.class)
@@ -555,23 +533,12 @@ public class CoNLLCoref2012DocumentWriterTest {
 
 		String misc = "SPAN_0|15;" + startIndicator + "_23;" + startIndicator + "_9;" + endIndicator + "_23;"
 				+ endIndicator + "_9";
-		CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.IDENT);
-	}
-
-	@Test
-	public void testFormCorefInfoString_DoesNotThrowExceptionForApposWithMultipleChainMembersForSingleToken() {
-		String startIndicator = CoNLLCoref2012DocumentWriter.START_STATUS_INDICATOR;
-		String endIndicator = CoNLLCoref2012DocumentWriter.END_STATUS_INDICATOR;
-
-		String misc = "SPAN_0|15;" + startIndicator + "_23;" + startIndicator + "_9;" + endIndicator + "_23;"
-				+ endIndicator + "_9";
-		CoNLLCoref2012DocumentWriter.formCorefInfoString(misc, IncludeCorefType.APPOS);
+		CoNLLCoref2012DocumentWriter.formCorefInfoString(misc);
 	}
 
 	/**
-	 * In cases where there are chains that share member annotations, test that
-	 * they get merged properly, e.g. [A,B,C,D] and [B,E] get merged to
-	 * [A,B,C,D,E]
+	 * In cases where there are chains that share member annotations, test that they get merged
+	 * properly, e.g. [A,B,C,D] and [B,E] get merged to [A,B,C,D,E]
 	 * 
 	 * @throws IOException
 	 */
@@ -586,8 +553,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				documentTextStream, encoding);
 
 		/*
-		 * The (1) chain has been broken into two pieces, (1) and (6). We will
-		 * test if these get merged properly
+		 * The (1) chain has been broken into two pieces, (1) and (6). We will test if these get
+		 * merged properly
 		 */
 
 		assertEquals(
@@ -660,18 +627,16 @@ public class CoNLLCoref2012DocumentWriterTest {
 		}
 
 		/*
-		 * so we have confirmed at this point that there is are 6 chains, where
-		 * chains (1) & (6) should really be combined b/c they overlap with one
-		 * chain member. Now let's write the chains using the
-		 * CoNLLCoref2012DocumentWriter and see if the chains get consolidated.
+		 * so we have confirmed at this point that there is are 6 chains, where chains (1) & (6)
+		 * should really be combined b/c they overlap with one chain member. Now let's write the
+		 * chains using the CoNLLCoref2012DocumentWriter and see if the chains get consolidated.
 		 */
 
 		File outputFile = folder.newFile("sample.conll");
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, outputFile, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputFile, encoding);
 
 		/*
-		 * now load the output file and check that they chains have the correct
-		 * number of members
+		 * now load the output file and check that they chains have the correct number of members
 		 */
 		documentTextStream = ClassPathUtil.getResourceStreamFromClasspath(getClass(), "sample-craft.txt");
 
@@ -739,8 +704,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		}
 
 		/*
-		 * expected lines come from the properly formatted file with only 5
-		 * chains
+		 * expected lines come from the properly formatted file with only 5 chains
 		 */
 		List<String> expectedLines = FileReaderUtil.loadLinesFromFile(
 				ClassPathUtil.getResourceStreamFromClasspath(getClass(), "sample-craft.ident.conll"), encoding);
@@ -751,9 +715,9 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * In cases where there are chains that share member annotations, test that
-	 * they get merged properly. This test tests that a 3-way merge is possible,
-	 * e.g. [A,B,C,D] and [B,E] and [E,F] get merged to [A,B,C,D,E,F]
+	 * In cases where there are chains that share member annotations, test that they get merged
+	 * properly. This test tests that a 3-way merge is possible, e.g. [A,B,C,D] and [B,E] and [E,F]
+	 * get merged to [A,B,C,D,E,F]
 	 * 
 	 * @throws IOException
 	 */
@@ -768,8 +732,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				documentTextStream, encoding);
 
 		/*
-		 * The (1) chain has been broken into three pieces, (1), (6), and (7).
-		 * We will test if these get merged properly
+		 * The (1) chain has been broken into three pieces, (1), (6), and (7). We will test if these
+		 * get merged properly
 		 */
 
 		assertEquals(
@@ -842,19 +806,17 @@ public class CoNLLCoref2012DocumentWriterTest {
 		}
 
 		/*
-		 * so we have confirmed at this point that there is are 7 chains, where
-		 * chains (1), (6), & (7) should really be combined b/c they overlap
-		 * with one chain member, i.e. (1) and (6) overlap by one member and (6)
-		 * and (7) overlap by one member. Now let's write the chains using the
-		 * CoNLLCoref2012DocumentWriter and see if the chains get consolidated.
+		 * so we have confirmed at this point that there is are 7 chains, where chains (1), (6), &
+		 * (7) should really be combined b/c they overlap with one chain member, i.e. (1) and (6)
+		 * overlap by one member and (6) and (7) overlap by one member. Now let's write the chains
+		 * using the CoNLLCoref2012DocumentWriter and see if the chains get consolidated.
 		 */
 
 		File outputFile = folder.newFile("sample.conll");
-		new CoNLLCoref2012DocumentWriter(IncludeCorefType.IDENT).serialize(td, outputFile, encoding);
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputFile, encoding);
 
 		/*
-		 * now load the output file and check that they chains have the correct
-		 * number of members
+		 * now load the output file and check that they chains have the correct number of members
 		 */
 		documentTextStream = ClassPathUtil.getResourceStreamFromClasspath(getClass(), "sample-craft.txt");
 
@@ -922,8 +884,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		}
 
 		/*
-		 * expected lines come from the properly formatted file with only 5
-		 * chains
+		 * expected lines come from the properly formatted file with only 5 chains
 		 */
 		List<String> expectedLines = FileReaderUtil.loadLinesFromFile(
 				ClassPathUtil.getResourceStreamFromClasspath(getClass(), "sample-craft.ident.conll"), encoding);
@@ -932,4 +893,139 @@ public class CoNLLCoref2012DocumentWriterTest {
 		assertTrue(FileComparisonUtil.hasExpectedLines(observedLines, expectedLines, null, LineOrder.AS_IN_FILE,
 				ColumnOrder.AS_IN_FILE, LineTrim.OFF, ShowWhiteSpace.OFF));
 	}
+
+	@Test
+	public void testRedundantChainsInOutput() throws IOException {
+		CharacterEncoding encoding = CharacterEncoding.UTF_8;
+		File docTextFile = new File(
+				"/Users/bill/Dropbox/work/projects/craft-shared-task-2019/CRAFT.bill.git/articles/txt/15314659.txt");
+		TextDocument td = new KnowtatorDocumentReader().readDocument("15314659", "PMC",
+				new File(
+						"/Users/bill/Dropbox/work/projects/craft-shared-task-2019/CRAFT.bill.git/coreference-annotation/knowtator/15314659.txt.knowtator.xml"),
+				docTextFile, encoding);
+
+		String docText = StreamUtil
+				.toString(new InputStreamReader(new FileInputStream(docTextFile), encoding.getDecoder()));
+
+		String docTitle = (docText.substring(0, 111));
+
+		List<TextAnnotation> taList = new ArrayList<TextAnnotation>();
+		for (TextAnnotation ta : td.getAnnotations()) {
+			if (ta.getAggregateSpan().getSpanEnd() < 111) {
+				taList.add(ta);
+				if (ta.getClassMention().getComplexSlotMentionNames()
+						.contains(CoNLLCoref2012DocumentReader.IDENTITY_CHAIN_COREFERRING_STRINGS_SLOT)) {
+					ComplexSlotMention csm = ta.getClassMention().getComplexSlotMentionByName(
+							CoNLLCoref2012DocumentReader.IDENTITY_CHAIN_COREFERRING_STRINGS_SLOT);
+					List<ClassMention> cmToRemove = new ArrayList<ClassMention>();
+					for (ClassMention cm : csm.getClassMentions()) {
+						if (cm.getTextAnnotation().getAggregateSpan().getSpanEnd() > 111) {
+							cmToRemove.add(cm);
+						}
+					}
+					for (ClassMention cm : cmToRemove) {
+						csm.getClassMentions().remove(cm);
+					}
+				}
+			}
+		}
+
+		// for (TextAnnotation ta : taList) {
+		// System.out.println(ta);
+		// }
+
+	}
+
+	/**
+	 * Test that annotations with discontinuous spans are properly represented in ident chains
+	 * 
+	 * @throws IOException
+	 */
+	@Test
+	public void testDocumentWriter_discontinuousSpans() throws IOException {
+		CharacterEncoding encoding = CharacterEncoding.UTF_8;
+		InputStream conllStream = ClassPathUtil.getResourceStreamFromClasspath(getClass(),
+				"sample.discontinuous.conll");
+		InputStream documentTextStream = ClassPathUtil.getResourceStreamFromClasspath(getClass(),
+				"sample.discontinuous.txt");
+
+		TextDocument td = new CoNLLCoref2012DocumentReader().readDocument("11532192", "PMID", conllStream,
+				documentTextStream, encoding);
+
+		assertEquals("Expected 178 annotations -- 148 tokens + 5 sentences + 17 noun phrase + 8 identity chain", 178,
+				td.getAnnotations().size());
+
+		int npCount = 0;
+		int identCount = 0;
+		int discontinuousCount = 0;
+
+		for (TextAnnotation ta : td.getAnnotations()) {
+			String type = ta.getClassMention().getMentionName();
+			if (type.equalsIgnoreCase(CoNLLCoref2012DocumentReader.NOUN_PHRASE)) {
+				npCount++;
+			} else if (type.equalsIgnoreCase(CoNLLCoref2012DocumentReader.IDENTITY_CHAIN)) {
+				identCount++;
+			}
+			if (ta.getSpans().size() > 1) {
+				discontinuousCount++;
+			}
+		}
+
+		assertEquals("Expect 17 noun phrase annotations", 17, npCount);
+		assertEquals("Expect 8 IDENTITY chain annotations", 8, identCount);
+		assertEquals("Expect 9 discontinuous annotations: 6 noun phrase + 3 ident chain", 9, discontinuousCount);
+
+		// File outputFile = folder.newFile("sample.conll");
+		File outputFile = new File("/tmp/sample.conll");
+		new CoNLLCoref2012DocumentWriter().serialize(td, outputFile, encoding);
+
+		/*
+		 * now load the output file and check that the chains have the correct number of members
+		 */
+		documentTextStream = ClassPathUtil.getResourceStreamFromClasspath(getClass(), "sample.discontinuous.txt");
+
+		td = new CoNLLCoref2012DocumentReader().readDocument("11532192", "PMID", new FileInputStream(outputFile),
+				documentTextStream, encoding);
+
+		assertEquals("Expected 178 annotations -- 148 tokens + 5 sentences + 17 noun phrase + 8 identity chain", 178,
+				td.getAnnotations().size());
+
+		npCount = 0;
+		identCount = 0;
+		discontinuousCount = 0;
+
+		for (TextAnnotation ta : td.getAnnotations()) {
+			String type = ta.getClassMention().getMentionName();
+			if (type.equalsIgnoreCase(CoNLLCoref2012DocumentReader.NOUN_PHRASE)) {
+				npCount++;
+			} else if (type.equalsIgnoreCase(CoNLLCoref2012DocumentReader.IDENTITY_CHAIN)) {
+				identCount++;
+			}
+			if (ta.getSpans().size() > 1) {
+				discontinuousCount++;
+			}
+		}
+
+		assertEquals("Expect 17 noun phrase annotations", 17, npCount);
+		assertEquals("Expect 8 IDENTITY chain annotations", 8, identCount);
+		assertEquals("Expect 9 discontinuous annotations: 6 noun phrase + 3 ident chain", 9, discontinuousCount);
+
+		CoNLLCoref2012DocumentReaderTest.testForExpectedAnnotations(td);
+
+	}
+
+	@Test
+	public void testGetDiscontinuousMentionId() {
+		assertEquals("a", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(0));
+		assertEquals("b", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(1));
+		assertEquals("c", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(2));
+		assertEquals("z", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(25));
+		assertEquals("aa", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(26));
+		assertEquals("bb", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(27));
+		assertEquals("cc", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(28));
+		assertEquals("aaa", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(52));
+		assertEquals("bbb", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(53));
+		assertEquals("ccc", CoNLLCoref2012DocumentWriter.getDiscontinuousMentionId(54));
+	}
+
 }

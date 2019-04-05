@@ -10,13 +10,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import edu.ucdenver.ccp.common.collections.CollectionsUtil;
 import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.file.FileReaderUtil;
 import edu.ucdenver.ccp.common.io.StreamUtil;
+import edu.ucdenver.ccp.common.string.StringUtil;
 import edu.ucdenver.ccp.file.conversion.DocumentReader;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUDocumentReader;
+import edu.ucdenver.ccp.nlp.core.annotation.Span;
+import edu.ucdenver.ccp.nlp.core.annotation.SpanUtils;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationFactory;
 import edu.ucdenver.ccp.nlp.core.mention.ComplexSlotMention;
@@ -58,14 +64,14 @@ import lombok.Data;
  */
 
 public class CoNLLCoref2012DocumentReader extends DocumentReader {
-	static final String NOUN_PHRASE = "Noun phrase";
+	public static final String NOUN_PHRASE = "Noun Phrase";
 
-	static final String IDENTITY_CHAIN = "IDENTITY chain";
-	static final String IDENTITY_CHAIN_COREFERRING_STRINGS_SLOT = "Coreferring strings";
+	public static final String IDENTITY_CHAIN = "IDENTITY chain";
+	public static final String IDENTITY_CHAIN_COREFERRING_STRINGS_SLOT = "Coreferring strings";
 
-	static final String APPOS_RELATION = "APPOS relation";
-	static final String APPOS_HEAD_SLOT = "APPOS Head";
-	static final String APPOS_ATTRIBUTES_SLOT = "APPOS Attributes";
+	public static final String APPOS_RELATION = "APPOS relation";
+	public static final String APPOS_HEAD_SLOT = "APPOS Head";
+	public static final String APPOS_ATTRIBUTES_SLOT = "APPOS Attributes";
 
 	@Override
 	public TextDocument readDocument(String sourceId, String sourceDb, InputStream inputStream,
@@ -73,20 +79,27 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 		// document text is used to get the spans for all annotations
 		String documentText = StreamUtil.toString(new InputStreamReader(documentTextStream, encoding.getDecoder()));
 		TextDocument td = new TextDocument(sourceId, sourceDb, documentText);
-		td.addAnnotations(getAnnotations(inputStream, documentText, encoding));
+		td.addAnnotations(getAnnotations(inputStream, sourceId, documentText, encoding));
 		return td;
 
 	}
 
-	public static List<TextAnnotation> getAnnotations(InputStream conllUStream, String documentText,
+	public static List<TextAnnotation> getAnnotations(InputStream conllUStream, String documentId, String documentText,
 			CharacterEncoding encoding) throws IOException {
 
-		TextAnnotationFactory factory = TextAnnotationFactory.createFactoryWithDefaults();
+		TextAnnotationFactory factory = TextAnnotationFactory.createFactoryWithDefaults(documentId);
 		int documentOffset = 0;
 		List<TextAnnotation> annotations = new ArrayList<TextAnnotation>();
 
 		Map<Integer, TextAnnotation> chainIdToIdentityAnnotMap = new HashMap<Integer, TextAnnotation>();
 		Map<Integer, Stack<OpenChainMember>> chainIdToOpenChainMembers = new HashMap<Integer, Stack<OpenChainMember>>();
+
+		/*
+		 * track the annotations for discontinuous chain members so that their
+		 * spans can be added as they are observed by the reader
+		 */
+		Map<String, TextAnnotation> discontinuousNpIdToAnnotMap = new HashMap<String, TextAnnotation>();
+		Map<String, Integer> discontinuousNpIdToChainIdMap = new HashMap<String, Integer>();
 
 		BufferedReader conllUReader = FileReaderUtil.initBufferedReader(conllUStream, encoding);
 		String sentenceLines;
@@ -102,9 +115,12 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 				CoNLLCoref2012FileRecord record = rr.next();
 				TextAnnotation token = CoNLLUDocumentReader.createTokenAnnotation(record.getWord(),
 						record.getPartOfSpeech(), documentText, documentOffset, factory);
+
 				annotations.add(token);
 				tokenNumToAnnotMap.put(tokenIndex++, token);
 				documentOffset = token.getAggregateSpan().getSpanEnd();
+
+				trimAnnotation(documentText, token);
 
 				/*
 				 * now check to see if a coreference chain member starts, ends,
@@ -115,39 +131,89 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 					String[] toks = corefInfo.split("\\|");
 					for (String tok : toks) {
 						tok = tok.trim();
-						if (tok.matches("\\([0-9]+\\)")) {
+						if (tok.matches("\\([0-9]+\\w*\\)")) {
 							/* then this token is itself a chain member */
-							int chainId = Integer.parseInt(tok.substring(1, tok.length() - 1));
-							ClosedChainMember chainMember = new ClosedChainMember(chainId,
-									token.getAnnotationSpanStart(), token.getAnnotationSpanEnd());
-							addChainMember(chainMember, factory, annotations, chainIdToIdentityAnnotMap, documentText);
-						} else if (tok.matches("\\([0-9]+")) {
-							int chainId = Integer.parseInt(tok.substring(1));
-							OpenChainMember openChainMember = new OpenChainMember(chainId,
-									token.getAnnotationSpanStart());
-							storeOpenChainMember(openChainMember, chainIdToOpenChainMembers);
-						} else if (tok.matches("[0-9]+\\)")) {
-							int chainId = Integer.parseInt(tok.substring(0, tok.length() - 1));
-							ClosedChainMember closedChainMember = closeChainMember(chainId,
-									token.getAnnotationSpanEnd(), chainIdToOpenChainMembers);
-							addChainMember(closedChainMember, factory, annotations, chainIdToIdentityAnnotMap,
-									documentText);
+							Matcher m = Pattern.compile("\\(([0-9]+)(\\w*)\\)").matcher(tok);
+							if (m.find()) {
+								int chainId = Integer.parseInt(m.group(1));
+								String mentionId = (m.group(2).isEmpty()) ? null : m.group(2);
+								ClosedChainMember chainMember = new ClosedChainMember(chainId, mentionId,
+										token.getAnnotationSpanStart(), token.getAnnotationSpanEnd());
+								addChainMember(chainMember, factory, annotations, chainIdToIdentityAnnotMap,
+										discontinuousNpIdToAnnotMap, discontinuousNpIdToChainIdMap, documentText);
+							} else {
+								rr.close();
+								throw new IllegalStateException(
+										"Inner pattern should match outer pattern, so it should be impossible to be here.");
+							}
+						} else if (tok.matches("\\([0-9]+\\w*")) {
+							Matcher m = Pattern.compile("\\(([0-9]+)(\\w*)").matcher(tok);
+							if (m.find()) {
+								int chainId = Integer.parseInt(m.group(1));
+								String mentionId = (m.group(2).isEmpty()) ? null : m.group(2);
+								OpenChainMember openChainMember = new OpenChainMember(chainId, mentionId,
+										token.getAnnotationSpanStart());
+								storeOpenChainMember(openChainMember, chainIdToOpenChainMembers);
+							} else {
+								rr.close();
+								throw new IllegalStateException(
+										"Inner pattern should match outer pattern, so it should be impossible to be here.");
+							}
+						} else if (tok.matches("[0-9]+\\w*\\)")) {
+							Matcher m = Pattern.compile("([0-9]+)(\\w*)\\)").matcher(tok);
+							if (m.find()) {
+								int chainId = Integer.parseInt(m.group(1));
+								String mentionId = (m.group(2).isEmpty()) ? null : m.group(2);
+								ClosedChainMember closedChainMember = closeChainMember(chainId, mentionId,
+										token.getAnnotationSpanEnd(), chainIdToOpenChainMembers);
+								addChainMember(closedChainMember, factory, annotations, chainIdToIdentityAnnotMap,
+										discontinuousNpIdToAnnotMap, discontinuousNpIdToChainIdMap, documentText);
+							} else {
+								rr.close();
+								throw new IllegalStateException(
+										"Inner pattern should match outer pattern, so it should be impossible to be here.");
+							}
 						} else {
 							rr.close();
-							throw new IllegalStateException("Encountered unexpeced chain status: " + tok);
+							throw new IllegalStateException("Encountered unexpected chain status: " + tok);
 						}
 					}
 				}
 			}
 			int sentenceEnd = documentOffset;
 
-			TextAnnotation sentence = factory.createAnnotation(sentenceStart, sentenceEnd, "",
+			TextAnnotation sentence = factory.createAnnotation(sentenceStart, sentenceEnd, SpanUtils
+					.getCoveredText(CollectionsUtil.createList(new Span(sentenceStart, sentenceEnd)), documentText),
 					new DefaultClassMention("sentence"));
 
+			trimAnnotation(documentText, sentence);
 			annotations.add(sentence);
 
 		}
 		return annotations;
+	}
+
+	/**
+	 * removes any leading/trailing whitespace from the annotation
+	 * 
+	 * @param documentText
+	 * @param annot
+	 */
+	public static TextAnnotation trimAnnotation(String documentText, TextAnnotation annot) {
+		while (StringUtil.endsWithRegex(SpanUtils.getCoveredText(annot.getSpans(), documentText),"\\s")) {
+			int spanStart = annot.getAggregateSpan().getSpanStart();
+			int spanEnd = annot.getAggregateSpan().getSpanEnd() - 1;
+			annot.setSpan(new Span(spanStart, spanEnd));
+			annot.setCoveredText(SpanUtils.getCoveredText(annot.getSpans(), documentText));
+		}
+
+		while (StringUtil.startsWithRegex(SpanUtils.getCoveredText(annot.getSpans(), documentText),"\\s")) {
+			int spanStart = annot.getAggregateSpan().getSpanStart() + 1;
+			int spanEnd = annot.getAggregateSpan().getSpanEnd();
+			annot.setSpan(new Span(spanStart, spanEnd));
+			annot.setCoveredText(SpanUtils.getCoveredText(annot.getSpans(), documentText));
+		}
+		return annot;
 	}
 
 	/**
@@ -161,10 +227,10 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 	 * @param chainIdToOpenChainMembers
 	 * @return
 	 */
-	private static ClosedChainMember closeChainMember(int chainId, int spanEnd,
+	private static ClosedChainMember closeChainMember(int chainId, String mentionId, int spanEnd,
 			Map<Integer, Stack<OpenChainMember>> chainIdToOpenChainMembers) {
 		OpenChainMember openChainMember = chainIdToOpenChainMembers.get(chainId).pop();
-		return new ClosedChainMember(chainId, openChainMember.getSpanStart(), spanEnd);
+		return new ClosedChainMember(chainId, mentionId, openChainMember.getSpanStart(), spanEnd);
 	}
 
 	/**
@@ -189,7 +255,10 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 	/**
 	 * Logs the completion (closing) of a chain member annotation. The
 	 * annotation is created as a Noun phrase, and is added to an IDENTITY chain
-	 * annotation in the 'Coreferring strings' slot.
+	 * annotation in the 'Coreferring strings' slot. It is possible the
+	 * ClosedChainMember is a closed span for a discontinuous noun phrase
+	 * annotation. If this is the case, then a span gets added to an already
+	 * existing noun phrase annotation.
 	 * 
 	 * @param chainMember
 	 * @param factory
@@ -199,12 +268,39 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 	 */
 	private static void addChainMember(ClosedChainMember chainMember, TextAnnotationFactory factory,
 			List<TextAnnotation> annotations, Map<Integer, TextAnnotation> chainIdToIdentityAnnotMap,
-			String documentText) {
-		TextAnnotation npAnnot = factory.createAnnotation(chainMember.getSpanStart(), chainMember.getSpanEnd(),
-				documentText.substring(chainMember.getSpanStart(), chainMember.getSpanEnd()),
-				new DefaultClassMention("Noun phrase"));
-		annotations.add(npAnnot);
-		addToIdentityChain(chainMember.getChainId(), npAnnot, chainIdToIdentityAnnotMap, factory, annotations);
+			Map<String, TextAnnotation> discontinuousNpIdToNpAnnotMap,
+			Map<String, Integer> discontinuousNpIdToChainIdMap, String documentText) {
+		String key = chainMember.getChainId() + chainMember.getMentionId();
+		if (chainMember.getMentionId() != null && discontinuousNpIdToNpAnnotMap.containsKey(key)) {
+			Span span = new Span(chainMember.getSpanStart(), chainMember.getSpanEnd());
+			discontinuousNpIdToNpAnnotMap.get(key).addSpan(span);
+			discontinuousNpIdToNpAnnotMap.get(key).setCoveredText(
+					SpanUtils.getCoveredText(discontinuousNpIdToNpAnnotMap.get(key).getSpans(), documentText));
+
+			/*
+			 * if this discontinuous chain member is the head of the chain, then
+			 * update the span and covered text of the appropriate ident chain
+			 * annotation
+			 */
+			if (discontinuousNpIdToChainIdMap.containsKey(key)) {
+				TextAnnotation identAnnot = chainIdToIdentityAnnotMap.get(discontinuousNpIdToChainIdMap.get(key));
+				identAnnot.addSpan(span);
+				identAnnot.setCoveredText(SpanUtils.getCoveredText(identAnnot.getSpans(), documentText));
+			}
+		} else {
+			TextAnnotation npAnnot = factory.createAnnotation(chainMember.getSpanStart(), chainMember.getSpanEnd(),
+					documentText.substring(chainMember.getSpanStart(), chainMember.getSpanEnd()),
+					new DefaultClassMention(NOUN_PHRASE));
+			annotations.add(npAnnot);
+			boolean createdNewChain = addToIdentityChain(chainMember.getChainId(), npAnnot, chainIdToIdentityAnnotMap,
+					factory, annotations);
+			if (chainMember.getMentionId() != null) {
+				discontinuousNpIdToNpAnnotMap.put(key, npAnnot);
+				if (createdNewChain) {
+					discontinuousNpIdToChainIdMap.put(key, chainMember.getChainId());
+				}
+			}
+		}
 	}
 
 	/**
@@ -216,14 +312,17 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 	 * @param chainIdToIdentityAnnotMap
 	 * @param factory
 	 * @param annotations
+	 * @return true if a new identity chain was created
 	 */
-	private static void addToIdentityChain(int chainId, TextAnnotation npAnnot,
+	private static boolean addToIdentityChain(int chainId, TextAnnotation npAnnot,
 			Map<Integer, TextAnnotation> chainIdToIdentityAnnotMap, TextAnnotationFactory factory,
 			List<TextAnnotation> annotations) {
 		TextAnnotation identityChainAnnot = null;
+		boolean createdNewChain = false;
 		if (chainIdToIdentityAnnotMap.containsKey(chainId)) {
 			identityChainAnnot = chainIdToIdentityAnnotMap.get(chainId);
 		} else {
+			createdNewChain = true;
 			identityChainAnnot = factory.createAnnotation(npAnnot.getAnnotationSpanStart(),
 					npAnnot.getAnnotationSpanEnd(), npAnnot.getCoveredText(), new DefaultClassMention(IDENTITY_CHAIN));
 			chainIdToIdentityAnnotMap.put(chainId, identityChainAnnot);
@@ -232,6 +331,7 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 		ComplexSlotMention csm = identityChainAnnot.getClassMention()
 				.getComplexSlotMentionByName(IDENTITY_CHAIN_COREFERRING_STRINGS_SLOT);
 		csm.addClassMention(npAnnot.getClassMention());
+		return createdNewChain;
 	}
 
 	/**
@@ -243,6 +343,7 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 	@Data
 	private static class OpenChainMember {
 		private final int chainId;
+		private final String mentionId;
 		private final int spanStart;
 	}
 
@@ -254,6 +355,7 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 	@Data
 	private static class ClosedChainMember {
 		private final int chainId;
+		private final String mentionId;
 		private final int spanStart;
 		private final int spanEnd;
 	}

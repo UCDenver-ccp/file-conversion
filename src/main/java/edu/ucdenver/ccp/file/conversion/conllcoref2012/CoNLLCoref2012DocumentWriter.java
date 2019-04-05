@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -69,23 +70,33 @@ import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultClassMention;
  */
 
 /**
- * Writes IDENTITY chain and APPOS relations to the CoNLLCoref 2011/2012 file
- * format. -- if an APPOS head is part of an identity chain, then add its
- * attribute to that chain. -- If an APPOS relation exists on its own (not
- * connected to an IDENTITY chain) then treat it as an IDENTITY chain of length
- * 2
+ * Writes IDENTITY chains to the CoNLLCoref 2011/2012 file format.
  */
 public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 
+	/**
+	 * The original intent of this enum was to allow APPOS relations to also be output in the
+	 * CoNLLCoref format, however there are APPOS relations that share an attribute with other APPOS
+	 * relations, thus would have overlapping mentions. Overlapping mentions are not supported in
+	 * the CoNLLCoref format, so the APPOS output has been disabled.
+	 *
+	 */
 	public enum IncludeCorefType {
 		IDENT, APPOS
 	}
 
-	private IncludeCorefType includeCorefType;
+	/**
+	 * the chain merge operation happens twice. First to merge where there are shared mentions
+	 * between the chains, then again after the chain mention spans have been mapped to token
+	 * boundaries. This enum allows us to indicate if a chain merge is due to a shared mention from
+	 * the original data or for a shared mention caused by token boundary mapping.
+	 */
+	public enum MatchDueTo {
+		SHARED_MENTION, SPAN_TO_TOKEN_BOUNDARY_MATCH
+	}
 
-	public CoNLLCoref2012DocumentWriter(IncludeCorefType includeCorefType) {
+	public CoNLLCoref2012DocumentWriter() {
 		super();
-		this.includeCorefType = includeCorefType;
 	}
 
 	static final String START_STATUS_INDICATOR = "BEGIN";
@@ -97,16 +108,15 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 	public void serialize(TextDocument td, OutputStream outputStream, CharacterEncoding encoding) throws IOException {
 
 		/*
-		 * check for any leading or trailing white space in annotations, adjust
-		 * spans as necessary to remove whitespace
+		 * check for any leading or trailing white space in annotations, adjust spans as necessary
+		 * to remove whitespace
 		 */
 		List<TextAnnotation> annotations = td.getAnnotations();
 		trimAnnotations(annotations, td.getText());
 
 		/*
-		 * TD assumed to contain sentence & token/pos annotations +
-		 * single/multi-word base NP annotations linked into IDENT chains and
-		 * APPOS relations
+		 * TD assumed to contain sentence & token/pos annotations + single/multi-word base NP
+		 * annotations linked into IDENT chains and APPOS relations
 		 */
 
 		List<TextAnnotation> sentenceAndTokenAnnots = filterSentenceAndTokenAnnots(annotations);
@@ -116,55 +126,25 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		}
 
 		/*
-		 * group annotations by identity chain -- isolated appos relation =
-		 * chain of length 2
+		 * group annotations by identity chain -- isolated appos relation = chain of length 2
 		 */
-		Set<Set<TextAnnotation>> chains = getCoreferenceChains(
-				TextAnnotationFactory.createFactoryWithDefaults(td.getSourceid()), annotations, includeCorefType);
+		Map<TextAnnotation, Set<TextAnnotation>> chainAnnotToMemberAnnotsMap = getCoreferenceChains(
+				TextAnnotationFactory.createFactoryWithDefaults(td.getSourceid()), td.getText(), annotations, null);
 
-		// System.out.println("++++++ CHAIN COUNT (" + td.getSourceid() + "): "
-		// + chains.size());
+		Set<Set<TextAnnotation>> chains = new HashSet<Set<TextAnnotation>>(chainAnnotToMemberAnnotsMap.values());
+		/*
+		 * if there is an annotation that is a member of >1 chains, then those chains should be
+		 * combined - this step fixes some annotation errors. Ideally this step would not change the
+		 * annotation at all. This step is only relevan for IDENTITY chains.
+		 */
+		chains = mergeChainsIfSharedAnnotation(chains, MatchDueTo.SHARED_MENTION);
 
 		/*
-		 * if there is an annotation that is a member of >1 chains, then those
-		 * chains should be combined - this step fixes some annotation errors.
-		 * Ideally this step would not change the annotation at all. This step
-		 * is only relevan for IDENTITY chains.
-		 */
-		if (includeCorefType == IncludeCorefType.IDENT) {
-			chains = mergeChainsIfSharedAnnotation(chains);
-			// System.out.println("++++++ CONSOLIDATED CHAIN COUNT (" +
-			// td.getSourceid() + "): " + chains.size());
-		}
-
-		/*
-		 * Sort the chains to provide reproducibility in the chain numbering.
-		 * This is beneficial for unit testing, and could be potentially
-		 * beneficial in production as well.
-		 */
-		List<Set<TextAnnotation>> sortedChains = sortChains(chains);
-
-		// System.out.println("++++++ SORTED CHAIN COUNT (" + td.getSourceid() +
-		// "): " + sortedChains.size());
-
-		/*
-		 * The structure of the CoNLL Coref 2011/12 file format is similar to
-		 * that of CoNLL-U. It lists tokens sequentially with line breaks at
-		 * sentence boundaries. We can use logic in the CoNLL-U Document Writer
-		 * to get the token ordering.
+		 * The structure of the CoNLL Coref 2011/12 file format is similar to that of CoNLL-U. It
+		 * lists tokens sequentially with line breaks at sentence boundaries. We can use logic in
+		 * the CoNLL-U Document Writer to get the token ordering.
 		 */
 		List<CoNLLUFileRecord> records = CoNLLUDocumentWriter.generateRecords(sentenceAndTokenAnnots);
-
-		/*
-		 * the miscellaneous field of each record should have one and only one
-		 * span indication
-		 */
-		for (CoNLLUFileRecord record : records) {
-			if (record.getWordIndex() > -1 && !record.getMiscellaneous().matches("SPAN_\\d+\\|\\d+")) {
-				throw new IllegalStateException(
-						"misc doesn't match single span pattern: " + record.getMiscellaneous() + ";;;");
-			}
-		}
 
 		Map<Integer, CoNLLUFileRecord> tokenStartIndexToRecordMap = new HashMap<Integer, CoNLLUFileRecord>();
 		Map<Integer, CoNLLUFileRecord> tokenEndIndexToRecordMap = new HashMap<Integer, CoNLLUFileRecord>();
@@ -177,65 +157,84 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 				.sortMapByKeys(tokenEndIndexToRecordMap, SortOrder.ASCENDING);
 
 		/*
-		 * Add an indicator to the miscellaneous column of the CoNLLURecord to
-		 * indicate if a chain member starts or ends at a given token
+		 * update spans to match token boundaries. This can sometimes cause two chains to share a
+		 * mention. If so, we need to re-merge.
+		 */
+		mapSpansToTokenBoundaries(chains, sortedTokenStartIndexToRecordMap, sortedTokenEndIndexToRecordMap);
+
+		/*
+		 * re-merge in case there were collision when matching token boundaries
+		 */
+		chains = mergeChainsIfSharedAnnotation(chains, MatchDueTo.SPAN_TO_TOKEN_BOUNDARY_MATCH);
+
+		/*
+		 * Sort the chains to provide reproducibility in the chain numbering. This is beneficial for
+		 * unit testing, and could be potentially beneficial in production as well.
+		 */
+		List<Set<TextAnnotation>> sortedChains = sortChains(chains);
+
+		/*
+		 * the miscellaneous field of each record should have one and only one span indication
+		 */
+		for (CoNLLUFileRecord record : records) {
+			if (record.getWordIndex() > -1 && !record.getMiscellaneous().matches("SPAN_\\d+\\|\\d+")) {
+				throw new IllegalStateException(
+						"misc doesn't match single span pattern: " + record.getMiscellaneous() + ";;;");
+			}
+		}
+
+		/*
+		 * Add an indicator to the miscellaneous column of the CoNLLURecord to indicate if a chain
+		 * member starts or ends at a given token
 		 */
 		int chainCount = 1;
 		for (Set<TextAnnotation> chain : sortedChains) {
+
+			int discontinuousMentionCount = 0;
 			for (TextAnnotation annot : chain) {
-				int spanStart = annot.getAnnotationSpanStart();
-				int spanEnd = annot.getAnnotationSpanEnd();
 
-				// System.out.println("Process chains. Add to misc column.
-				// Chain" + chainCount + ": "
-				// + annot.getAggregateSpan().toString() + " -- " +
-				// annot.getCoveredText());
+				String mentionId = null;
+				if (annot.getSpans().size() > 1) {
+					mentionId = getDiscontinuousMentionId(discontinuousMentionCount++);
+				}
+				for (Span span : annot.getSpans()) {
+					int spanStart = span.getSpanStart();
+					int spanEnd = span.getSpanEnd();
+					CoNLLUFileRecord startRecord = sortedTokenStartIndexToRecordMap.get(spanStart);
 
-				CoNLLUFileRecord startRecord = sortedTokenStartIndexToRecordMap.get(spanStart);
-				// System.out.println("START RECORD: " +
-				// startRecord.toCoNLLUFormatString());
-				// if (startRecord != null && startRecord.getWordIndex() > -1 &&
-				// !startRecord.getMiscellaneous().matches("SPAN_\\d+\\|\\d+"))
-				// {
-				// throw new IllegalStateException(
-				// "misc doesn't match single span pattern: " +
-				// startRecord.getMiscellaneous() + ";;;");
-				// }
+					if (startRecord == null) {
+						/*
+						 * should not be null at this point b/c the annotation spans have been
+						 * mapped to token boundaries
+						 */
+						throw new IllegalStateException(
+								"Should not be null. Could not find record for start offset: " + spanStart);
+					}
+					String status = (mentionId == null) ? START_STATUS_INDICATOR + "_" + chainCount
+							: START_STATUS_INDICATOR + "_" + chainCount + mentionId;
+					List<String> startStatus = stringToList(startRecord.getMiscellaneous());
+					startStatus.add(status);
+					startRecord.setMiscellaneous(listToString(startStatus));
+					CoNLLUFileRecord endRecord = sortedTokenEndIndexToRecordMap.get(spanEnd);
+					if (endRecord == null) {
+						/*
+						 * should not be null at this point b/c the annotation spans have been
+						 * mapped to token boundaries
+						 */
+						throw new IllegalStateException(
+								"Should not be null. Could not find record for end offset: " + spanEnd);
+					}
+					List<String> endStatus = stringToList(endRecord.getMiscellaneous());
+					status = (mentionId == null) ? END_STATUS_INDICATOR + "_" + chainCount
+							: END_STATUS_INDICATOR + "_" + chainCount + mentionId;
+					endStatus.add(status);
 
-				if (startRecord == null) {
-					/*
-					 * coreference noun phrases may not exactly align with the
-					 * tokenization of the document. In cases like this, we
-					 * consider the token overlapping the start index to be the
-					 * start of the coreference.
-					 */
-					logger.info(
-							"++++++ CHAIN MEMBER START SPAN MISMATCH WITH TOKENENIZATION - ALIGNING TO OVERLAPPING TOKEN");
-					startRecord = findOverlappingStartToken(sortedTokenStartIndexToRecordMap, spanStart);
-					logger.info("------ CHAIN MEMBER START -- " + annot.getAggregateSpan().toString() + " -- "
-							+ annot.getCoveredText() + " MATCH WITH TOKEN: " + startRecord.getForm());
+					// the misc column should already contain an indicator of
+					// the
+					// token span, e.g. 'SPAN_0|5'
+					endRecord.setMiscellaneous(listToString(endStatus));
 
 				}
-				List<String> startStatus = stringToList(startRecord.getMiscellaneous());
-				startStatus.add(START_STATUS_INDICATOR + "_" + chainCount);
-				startRecord.setMiscellaneous(listToString(startStatus));
-				CoNLLUFileRecord endRecord = sortedTokenEndIndexToRecordMap.get(spanEnd);
-				if (endRecord == null) {
-					logger.info(
-							"------ CHAIN MEMBER END SPAN MISMATCH WITH TOKENENIZATION - ALIGNING TO OVERLAPPING TOKEN");
-					endRecord = findOverlappingEndToken(sortedTokenEndIndexToRecordMap, spanEnd);
-					logger.info("------ CHAIN MEMBER END -- " + annot.getAggregateSpan().toString() + " -- "
-							+ annot.getCoveredText() + " MATCH WITH TOKEN: " + endRecord.getForm());
-
-				}
-				List<String> endStatus = stringToList(endRecord.getMiscellaneous());
-				endStatus.add(END_STATUS_INDICATOR + "_" + chainCount);
-
-				// the misc column should already contain an indicator of
-				// the
-				// token span, e.g. 'SPAN_0|5'
-				endRecord.setMiscellaneous(listToString(endStatus));
-
 			}
 			chainCount++;
 		}
@@ -255,6 +254,67 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 
 	}
 
+	private void mapSpansToTokenBoundaries(Set<Set<TextAnnotation>> chains,
+			Map<Integer, CoNLLUFileRecord> sortedTokenStartIndexToRecordMap,
+			Map<Integer, CoNLLUFileRecord> sortedTokenEndIndexToRecordMap) {
+		for (Set<TextAnnotation> chain : chains) {
+			for (TextAnnotation annot : chain) {
+				List<Span> updatedSpans = new ArrayList<Span>();
+				for (Span span : annot.getSpans()) {
+					int spanStart = span.getSpanStart();
+					int spanEnd = span.getSpanEnd();
+					CoNLLUFileRecord startRecord = sortedTokenStartIndexToRecordMap.get(spanStart);
+					if (startRecord == null) {
+						/*
+						 * coreference noun phrases may not exactly align with the tokenization of
+						 * the document. In cases like this, we consider the token overlapping the
+						 * start index to be the start of the coreference.
+						 */
+						startRecord = findOverlappingStartToken(sortedTokenStartIndexToRecordMap, spanStart);
+					}
+					CoNLLUFileRecord endRecord = sortedTokenEndIndexToRecordMap.get(spanEnd);
+					if (endRecord == null) {
+						endRecord = findOverlappingEndToken(sortedTokenEndIndexToRecordMap, spanEnd);
+					}
+					int newSpanStart = getSpan(startRecord).getSpanStart();
+					int newSpanEnd = getSpan(endRecord).getSpanEnd();
+					updatedSpans.add(new Span(newSpanStart, newSpanEnd));
+				}
+				annot.setSpans(updatedSpans);
+			}
+		}
+	}
+
+	private Span getSpan(CoNLLUFileRecord record) {
+		String miscellaneous = record.getMiscellaneous();
+		Pattern p = Pattern.compile("SPAN_(\\d+)\\|(\\d+)");
+		Matcher m = p.matcher(miscellaneous);
+		if (m.find()) {
+			int spanStart = Integer.parseInt(m.group(1));
+			int spanEnd = Integer.parseInt(m.group(2));
+			return new Span(spanStart, spanEnd);
+		}
+		throw new IllegalArgumentException("unable to extract span from miscellaneous column: " + record.toString());
+	}
+
+	/**
+	 * @param index
+	 * @return for the input integer, return a unique string of characters that will serve as the
+	 *         discontinuous mention id
+	 */
+	static String getDiscontinuousMentionId(int index) {
+		Vector<String> letters = new Vector<String>(CollectionsUtil.createList("a", "b", "c", "d", "e", "f", "g", "h",
+				"i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"));
+
+		StringBuffer sb = new StringBuffer();
+		do {
+			sb.append(letters.get(index % letters.size()));
+			index = index - letters.size();
+		} while (index >= 0);
+
+		return sb.toString();
+	}
+
 	/**
 	 * @param annotations
 	 * @param text
@@ -272,12 +332,7 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 				} else {
 					logger.info("<<<<<<< Detected leading or trailing whitespace for annot: "
 							+ annot.getSingleLineRepresentation());
-					while (annot.getCoveredText().startsWith(" ")) {
-						incrementSpanStart(annot, docText);
-					}
-					while (annot.getCoveredText().endsWith(" ")) {
-						decrementSpanEnd(annot, docText);
-					}
+					CoNLLCoref2012DocumentReader.trimAnnotation(docText, annot);
 				}
 			}
 		}
@@ -286,34 +341,6 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		for (TextAnnotation blankAnnot : blankAnnots) {
 			annotations.remove(blankAnnot);
 		}
-	}
-
-	/**
-	 * Increase the span start by one, update the annotation covered text
-	 * 
-	 * @param annot
-	 * @param docText
-	 */
-	private void incrementSpanStart(TextAnnotation annot, String docText) {
-		List<Span> spans = annot.getSpans();
-		Collections.sort(spans, Span.ASCENDING());
-		Span firstSpan = spans.get(0);
-		firstSpan.setSpanStart(firstSpan.getSpanStart() + 1);
-		annot.setCoveredText(SpanUtils.getCoveredText(spans, docText));
-	}
-
-	/**
-	 * Decrease the span end by one, update the annotation covered text
-	 * 
-	 * @param annot
-	 * @param docText
-	 */
-	private void decrementSpanEnd(TextAnnotation annot, String docText) {
-		List<Span> spans = annot.getSpans();
-		Collections.sort(spans, Span.ASCENDING());
-		Span lastSpan = spans.get(spans.size() - 1);
-		lastSpan.setSpanEnd(lastSpan.getSpanEnd() - 1);
-		annot.setCoveredText(SpanUtils.getCoveredText(spans, docText));
 	}
 
 	/**
@@ -327,13 +354,9 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		CoNLLUFileRecord record = null;
 		for (Entry<Integer, CoNLLUFileRecord> entry : sortedTokenIndexToRecordMap.entrySet()) {
 			if (spanOffset < entry.getKey()) {
-				System.out.println("----- RECORD: " + record.getForm() + " -- " + record.getMiscellaneous());
 				return record;
 			}
 			record = entry.getValue();
-			if (Math.abs(spanOffset - entry.getKey()) < 30) {
-				System.out.println("----- RECORD: " + record.getForm() + " -- " + record.getMiscellaneous());
-			}
 		}
 
 		logger.info("Returning final record when searching for overlapping token.");
@@ -348,11 +371,7 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		for (Entry<Integer, CoNLLUFileRecord> entry : sortedTokenIndexToRecordMap.entrySet()) {
 			record = entry.getValue();
 			if (spanOffset < entry.getKey()) {
-				System.out.println("----- RECORD: " + record.getForm() + " -- " + record.getMiscellaneous());
 				return record;
-			}
-			if (Math.abs(spanOffset - entry.getKey()) < 30) {
-				System.out.println("----- RECORD: " + record.getForm() + " -- " + record.getMiscellaneous());
 			}
 		}
 
@@ -363,9 +382,9 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 
 	/**
 	 * @param consolidatedChains
-	 * @return sorted list of chains (sorted by appearance of first annotation
-	 *         in the chain). Sorting adds reproducibility -- necessary for unit
-	 *         testing so that the chains have reproducible identifiers.
+	 * @return sorted list of chains (sorted by appearance of first annotation in the chain).
+	 *         Sorting adds reproducibility -- necessary for unit testing so that the chains have
+	 *         reproducible identifiers.
 	 */
 	private List<Set<TextAnnotation>> sortChains(Set<Set<TextAnnotation>> chains) {
 
@@ -395,32 +414,88 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 	}
 
 	/**
-	 * This method fixes presumable annotation errors by joining chains that
-	 * share an annotation, e.g. if there are two chains [A B C] and [B D] then
-	 * they should be joined to become [A B C D]
+	 * This method fixes presumable annotation errors by joining chains that share an annotation,
+	 * e.g. if there are two chains [A B C] and [B D] then they should be joined to become [A B C D]
 	 * 
 	 * @param chains
+	 * @param matchDueTo
 	 * @return
 	 */
-	static Set<Set<TextAnnotation>> mergeChainsIfSharedAnnotation(Set<Set<TextAnnotation>> chains) {
+	public static Set<Set<TextAnnotation>> mergeChainsIfSharedAnnotation(Set<Set<TextAnnotation>> chains,
+			MatchDueTo matchDueTo) {
 		Set<Set<TextAnnotation>> updatedChains = new HashSet<Set<TextAnnotation>>(chains);
 		int previousChainCount = -1;
 		/* merge chains until there are no more chains to merge */
 		do {
 			previousChainCount = updatedChains.size();
-			updatedChains = mergeChains(updatedChains);
+			updatedChains = mergeChains(updatedChains, matchDueTo);
 		} while (updatedChains.size() != previousChainCount);
 
 		return updatedChains;
 	}
 
-	private static Set<Set<TextAnnotation>> mergeChains(Set<Set<TextAnnotation>> chains) {
+	private static Set<Set<TextAnnotation>> mergeChains(Set<Set<TextAnnotation>> chains, MatchDueTo matchDueTo) {
+		// System.out.println("Merging...");
 		Map<TextAnnotation, Set<Set<TextAnnotation>>> taToChainMap = new HashMap<TextAnnotation, Set<Set<TextAnnotation>>>();
+
+		/*
+		 * the map above will catch an NP that occurs in >1 identity chains, however we are not
+		 * catching an NP and an APPOS that have the same span that occur in the same identity
+		 * chain. These should also be candidates to merge. The map below will be used to detect
+		 * chain members that have identical spans.
+		 */
+
+		Map<List<Span>, Set<TextAnnotation>> spanToAnnotMap = new HashMap<List<Span>, Set<TextAnnotation>>();
 
 		/* map each text annotation to its chain(s) */
 		for (Set<TextAnnotation> chain : chains) {
 			for (TextAnnotation ta : chain) {
+				CollectionsUtil.addToOne2ManyUniqueMap(ta.getSpans(), ta, spanToAnnotMap);
 				CollectionsUtil.addToOne2ManyUniqueMap(ta, chain, taToChainMap);
+			}
+		}
+
+		for (Entry<List<Span>, Set<TextAnnotation>> entry : spanToAnnotMap.entrySet()) {
+			if (entry.getValue().size() > 1) {
+				/*
+				 * the we have detected chain members with identical spans - should be a Noun Phrase
+				 * and an APPOS annotation. We will replace usage of the NP with usage of the APPOS
+				 * annotation for consistency.
+				 */
+				if (entry.getValue().size() > 2) {
+					throw new IllegalStateException(
+							"Did not expect more than 2 annotations here. Expected 1 Noun Phrase and 1 Appos with identical spans.");
+				}
+
+				TextAnnotation npAnnot = getNpAnnot(entry.getValue());
+				TextAnnotation apposAnnot = getApposAnnot(entry.getValue());
+
+				logger.info("#### Swapping Noun Phrase for APPOS annotation in identity chain(s)");
+				logger.info(
+						"The chain(s) listed below have as members a Noun Phrase annotation and an APPOS annotation with identical spans. For consistency, we remove the Noun Phrase annotation where used and replace its usage with the APPOS annotation.");
+
+				logger.info("The Noun Phrase:" + toLogString(npAnnot));
+				logger.info("The APPOS annot:" + toLogString(apposAnnot));
+
+				Set<Set<TextAnnotation>> npAnnotChains = taToChainMap.get(npAnnot);
+				for (Set<TextAnnotation> chain : npAnnotChains) {
+					/*
+					 * in each chain, remove the npAnnot and replace with the apposAnnot
+					 */
+					boolean chainUpdated = chain.remove(npAnnot);
+					if (chainUpdated) {
+						chain.add(apposAnnot);
+						logger.info("Updated chain:");
+						for (TextAnnotation ta : chain) {
+							logger.info("_  " + toLogString(ta));
+						}
+					}
+				}
+				/*
+				 * all references to the np annot have been removed from chains, so remove it from
+				 * the taToChainMap
+				 */
+				taToChainMap.remove(npAnnot);
 			}
 		}
 
@@ -429,19 +504,32 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		for (Entry<TextAnnotation, Set<Set<TextAnnotation>>> entry : taToChainMap.entrySet()) {
 			if (entry.getValue().size() > 1) {
 				Set<TextAnnotation> mergedChain = new HashSet<TextAnnotation>();
-				logger.info(">>>>>>>>>>>>>>>>>> Discovered " + entry.getValue().size() + " chains to merge.");
-				int chainId = 1;
+				logger.info("#### Merging chains based on shared coreferring string "
+						+ ((matchDueTo == MatchDueTo.SPAN_TO_TOKEN_BOUNDARY_MATCH)
+								? "caused by matching spans to token boundaries" : ""));
+				logger.info("Shared coreferring string:" + toLogString(entry.getKey()));
+				Set<TextAnnotation> overlap = new HashSet<TextAnnotation>();
 				for (Set<TextAnnotation> chain : entry.getValue()) {
-					mergedChain.addAll(chain);
-					for (TextAnnotation ta : chain) {
-						System.out.println("Chain-to-merge " + chainId + ": " + ta.getAggregateSpan().toString()
-								+ " -- " + ta.getCoveredText());
+					if (overlap.isEmpty()) {
+						overlap = new HashSet<TextAnnotation>(chain);
+					} else {
+						overlap.retainAll(chain);
 					}
-					chainId++;
+				}
+				logger.info("Overlap in original chains: " + overlap.size() + " annotations.\n");
+				int chainCount = 0;
+				for (Set<TextAnnotation> chain : entry.getValue()) {
+					List<TextAnnotation> taList = new ArrayList<TextAnnotation>(chain);
+					Collections.sort(taList, TextAnnotation.BY_SPAN());
+					for (TextAnnotation ta : taList) {
+						logger.info("> chain " + chainCount + " -- " + toLogString(ta));
+					}
+					logger.info("");
+					mergedChain.addAll(chain);
+					chainCount++;
 				}
 				/*
-				 * remove chains that have been combined and add the newly
-				 * merged chain
+				 * remove chains that have been combined and add the newly merged chain
 				 */
 				for (Set<TextAnnotation> chain : entry.getValue()) {
 					updatedChains.remove(chain);
@@ -452,6 +540,32 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		}
 
 		return updatedChains;
+	}
+
+	/**
+	 * @param value
+	 * @return appos annot from a set assumed to be of size 2, also containing an np annot
+	 */
+	private static TextAnnotation getApposAnnot(Set<TextAnnotation> set) {
+		for (TextAnnotation ta : set) {
+			if (ta.getClassMention().getMentionName().equalsIgnoreCase(CoNLLCoref2012DocumentReader.APPOS_RELATION)) {
+				return ta;
+			}
+		}
+		throw new IllegalArgumentException("set should have contained an APPOS relation annotation");
+	}
+
+	/**
+	 * @param value
+	 * @return np annot from a set assumed to be of size 2, also containing an appos annot
+	 */
+	private static TextAnnotation getNpAnnot(Set<TextAnnotation> set) {
+		for (TextAnnotation ta : set) {
+			if (ta.getClassMention().getMentionName().equalsIgnoreCase(CoNLLCoref2012DocumentReader.NOUN_PHRASE)) {
+				return ta;
+			}
+		}
+		throw new IllegalArgumentException("set should have contained an Noun Phrase annotation");
 	}
 
 	private String listToString(List<String> statusSet) {
@@ -507,122 +621,98 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 
 	/**
 	 * @param annotations
-	 * @return members of identity chains grouped in separate lists (one list
-	 *         per chain)
+	 *            npAnnotations - optional parameter. if present then any created np annots will get
+	 *            added to the set
+	 * @return members of identity chains grouped in separate lists (one list per chain)
 	 */
-	private Set<Set<TextAnnotation>> getCoreferenceChains(TextAnnotationFactory factory,
-			List<TextAnnotation> annotations, IncludeCorefType includeCorefType) {
-		Set<Set<TextAnnotation>> chainSet = new HashSet<Set<TextAnnotation>>();
+	public static Map<TextAnnotation, Set<TextAnnotation>> getCoreferenceChains(TextAnnotationFactory factory,
+			String documentText, Collection<TextAnnotation> annotations, Set<TextAnnotation> npAnnotations) {
+		Map<TextAnnotation, Set<TextAnnotation>> chainToMemberAnnotsMap = new HashMap<TextAnnotation, Set<TextAnnotation>>();
 		List<TextAnnotation> sortedAnnotations = new ArrayList<TextAnnotation>(annotations);
 		Collections.sort(sortedAnnotations, TextAnnotation.BY_SPAN());
-		Map<Span, TextAnnotation> spanToNounPhraseAnnotMap = new HashMap<Span, TextAnnotation>();
+		Map<List<Span>, TextAnnotation> spanToNounPhraseAnnotMap = new HashMap<List<Span>, TextAnnotation>();
 
 		for (TextAnnotation annot : sortedAnnotations) {
 			String type = annot.getClassMention().getMentionName();
 			if (type.equalsIgnoreCase(CoNLLCoref2012DocumentReader.NOUN_PHRASE)) {
-				spanToNounPhraseAnnotMap.put(annot.getAggregateSpan(), annot);
-			} else if (includeCorefType == IncludeCorefType.IDENT
-					&& type.equalsIgnoreCase(CoNLLCoref2012DocumentReader.IDENTITY_CHAIN)) {
+				spanToNounPhraseAnnotMap.put(annot.getSpans(), annot);
+			} else if (type.equalsIgnoreCase(CoNLLCoref2012DocumentReader.IDENTITY_CHAIN)) {
 				ComplexSlotMention csm = annot.getClassMention().getComplexSlotMentionByName(
 						CoNLLCoref2012DocumentReader.IDENTITY_CHAIN_COREFERRING_STRINGS_SLOT);
 				Set<TextAnnotation> chain = new HashSet<TextAnnotation>();
 				boolean hasChainHead = false;
 
-				if (csm.getClassMentions().isEmpty()) {
-					/*
-					 * mark this as empty - should be removed - it is a chain of
-					 * length 1
-					 */
-					logger.info("________ OBSERVED IDENT CHAIN OF LENGTH 1: " + annot.toString());
+				for (ClassMention cm : csm.getClassMentions()) {
+					TextAnnotation ta = cm.getTextAnnotation();
+					chain.add(ta);
+					if (ta.getSpans().equals(annot.getSpans())) {
+						// make sure the chain includes the annotation covered
+						// by the initial identity chain annotation
+						hasChainHead = true;
+					}
+				}
+
+				if (!hasChainHead) {
+					chain.add(findOrCreateCoveringNpAnnot(factory, documentText, spanToNounPhraseAnnotMap, annot, csm,
+							IncludeCorefType.IDENT, npAnnotations));
+				}
+				/*
+				 * a chain must have > 1 members so don't add it to the chainSet unless it has at
+				 * least 2 members
+				 */
+				if (chain.size() > 1) {
+					chainToMemberAnnotsMap.put(annot, chain);
 				} else {
-
-					for (ClassMention cm : csm.getClassMentions()) {
-						TextAnnotation ta = cm.getTextAnnotation();
-						chain.add(ta);
-						if (ta.getAggregateSpan().equals(annot.getAggregateSpan())) {
-							// make sure the chain includes the annotation
-							// covered
-							// by the initial identity chain annotation
-							hasChainHead = true;
-						}
-					}
-
-					if (!hasChainHead) {
-						System.out.println("========= IDENT CHAIN missing HEAD: " + annot.toString());
-
-						/* look to see if the */
-						/*
-						 * then look to see if the head NP exists, create one if
-						 * it doesn't
-						 */
-						TextAnnotation npAnnot = null;
-						if (spanToNounPhraseAnnotMap.get(annot.getAggregateSpan()) != null) {
-							npAnnot = spanToNounPhraseAnnotMap.get(annot.getAggregateSpan());
-						} else {
-							npAnnot = factory.createAnnotation(annot.getAnnotationSpanStart(),
-									annot.getAnnotationSpanEnd(), annot.getCoveredText(),
-									new DefaultClassMention(CoNLLCoref2012DocumentReader.NOUN_PHRASE));
-						}
-						chain.add(npAnnot);
-						csm.addClassMention(npAnnot.getClassMention());
-					}
-					chainSet.add(chain);
+					logger.info("#### Excluding IDENT chain of length 1\n" + toLogString(annot));
 				}
-			} else if (includeCorefType == IncludeCorefType.APPOS
-					&& type.equalsIgnoreCase(CoNLLCoref2012DocumentReader.APPOS_RELATION)) {
-
-				ComplexSlotMention headCsm = annot.getClassMention()
-						.getComplexSlotMentionByName(CoNLLCoref2012DocumentReader.APPOS_HEAD_SLOT);
-
-				ComplexSlotMention attributeCsm = annot.getClassMention()
-						.getComplexSlotMentionByName(CoNLLCoref2012DocumentReader.APPOS_ATTRIBUTES_SLOT);
-
-				if (!headCsm.getClassMentions().isEmpty() && !attributeCsm.getClassMentions().isEmpty()) {
-					Set<TextAnnotation> chain = new HashSet<TextAnnotation>();
-
-					boolean hasApposHead = false;
-					for (ClassMention cm : headCsm.getClassMentions()) {
-						TextAnnotation ta = cm.getTextAnnotation();
-						chain.add(ta);
-						if (ta.getAggregateSpan().equals(annot.getAggregateSpan())) {
-							// make sure the chain includes the annotation
-							// covered
-							// by the initial identity chain annotation
-							hasApposHead = true;
-						}
-					}
-					for (ClassMention cm : attributeCsm.getClassMentions()) {
-						TextAnnotation ta = cm.getTextAnnotation();
-						chain.add(ta);
-						if (ta.getAggregateSpan().equals(annot.getAggregateSpan())) {
-							// make sure the chain includes the annotation
-							// covered
-							// by the initial identity chain annotation
-							hasApposHead = true;
-						}
-					}
-
-					if (!hasApposHead) {
-						logger.info("##### EVEN WITH HEAD SLOT, NO HEAD ANNOT: " + annot.toString());
-					}
-					chainSet.add(chain);
-
-				} else if (headCsm.getClassMentions().isEmpty()) {
-					logger.info("##### APPOS MISSING HEAD: " + annot.toString());
-
-				} else if (attributeCsm.getClassMentions().isEmpty()) {
-					logger.info("##### APPOS MISSING ATTRIBUTES: " + annot.toString());
-
-				}
-
 			}
 		}
-		return chainSet;
+
+		return chainToMemberAnnotsMap;
 	}
 
 	/**
-	 * Assumes any annotation not named "Noun Phrase" is a sentence or token
-	 * annotation
+	 * @param factory
+	 * @param documentText
+	 * @param spanToNounPhraseAnnotMap
+	 * @param annot
+	 * @param headCsm
+	 * @param includeCorefType
+	 * @param npAnnotations
+	 *            - optional. if present then any newly created np annots are added to the set.
+	 * @return
+	 */
+	public static TextAnnotation findOrCreateCoveringNpAnnot(TextAnnotationFactory factory, String documentText,
+			Map<List<Span>, TextAnnotation> spanToNounPhraseAnnotMap, TextAnnotation annot, ComplexSlotMention headCsm,
+			IncludeCorefType includeCorefType, Set<TextAnnotation> npAnnotations) {
+		/*
+		 * then look to see if the head NP exists, create one if it doesn't
+		 */
+		TextAnnotation npAnnot = null;
+		if (spanToNounPhraseAnnotMap.get(annot.getSpans()) != null) {
+			npAnnot = spanToNounPhraseAnnotMap.get(annot.getSpans());
+		} else {
+			npAnnot = createNpAnnotation(factory, documentText, annot.getSpans(), includeCorefType, npAnnotations);
+		}
+		headCsm.addClassMention(npAnnot.getClassMention());
+		return npAnnot;
+	}
+
+	public static TextAnnotation createNpAnnotation(TextAnnotationFactory factory, String documentText,
+			List<Span> spans, IncludeCorefType includeCorefType, Set<TextAnnotation> npAnnotations) {
+		TextAnnotation npAnnot;
+		npAnnot = factory.createAnnotation(spans, documentText,
+				new DefaultClassMention(CoNLLCoref2012DocumentReader.NOUN_PHRASE));
+		if (npAnnotations != null) {
+			npAnnotations.add(npAnnot);
+		}
+		logger.info("#### Creating missing Noun Phrase annotation inferred from " + includeCorefType.name()
+				+ " annotation\n" + toLogString(npAnnot));
+		return npAnnot;
+	}
+
+	/**
+	 * Assumes any annotation not named "Noun Phrase" is a sentence or token annotation
 	 * 
 	 * @param annotations
 	 * @return
@@ -643,8 +733,7 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 	/**
 	 * @param record
 	 * @param documentId
-	 * @return a String in CoNLL coref 2011/12 format using data from the input
-	 *         record
+	 * @return a String in CoNLL coref 2011/12 format using data from the input record
 	 * 
 	 *         <pre>
 	 * Column	Type	Description
@@ -679,7 +768,7 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		sb.append("\t-");
 		sb.append("\t-");
 
-		String corefInfo = formCorefInfoString(record.getMiscellaneous(), includeCorefType);
+		String corefInfo = formCorefInfoString(record.getMiscellaneous());
 		sb.append("\t" + corefInfo);
 		return sb.toString();
 	}
@@ -691,40 +780,41 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 	 * for the end of a multi-token chain member and a single token chain member overlapping: (0)|8)
 	 * for two chain members starting on the same token: (53|(67
 	 * for two chain members ending on the same token: 67)|45)
+	 * for a token that is a member of a discontinuous chain member: (0a) where 'a' is the member identifier ('a' can be any sequence of characters (non-digits))
 	 * </pre>
 	 * 
 	 * @param misc
-	 * @return a parenthetical representation of the start and ends of identify
-	 *         chain members
+	 * @return a parenthetical representation of the start and ends of identify chain members
 	 */
-	static String formCorefInfoString(String misc, IncludeCorefType includeCorefType) {
+	static String formCorefInfoString(String misc) {
 		if (misc == null || misc.isEmpty()) {
 			return "-";
 		}
 
-		Map<Integer, Collection<String>> chainIdToStatusMap = new HashMap<Integer, Collection<String>>();
+		Map<String, Collection<String>> chainIdToStatusMap = new HashMap<String, Collection<String>>();
 		String[] toks = misc.split(";");
 		for (String tok : toks) {
 			// ignore the span indicator
 			if (!tok.startsWith("SPAN_")) {
 				String[] status_id = tok.split("_");
-				Integer chainId = Integer.parseInt(status_id[1]);
+				// chain id is a String b/c it could include a mentionId
+				// (non-digit), e.g. START_1a
+				String chainId = status_id[1];
 				String status = status_id[0];
 				CollectionsUtil.addToOne2ManyMap(chainId, status, chainIdToStatusMap);
 			}
 		}
 
-		List<Integer> startList = new ArrayList<Integer>();
-		List<Integer> endList = new ArrayList<Integer>();
-		List<Integer> bothList = new ArrayList<Integer>();
+		List<String> startList = new ArrayList<String>();
+		List<String> endList = new ArrayList<String>();
+		List<String> bothList = new ArrayList<String>();
 
 		/* sort for reproducibility with unit tests - and in production */
-		Map<Integer, Collection<String>> sortedMap = CollectionsUtil.sortMapByKeys(chainIdToStatusMap,
+		Map<String, Collection<String>> sortedMap = CollectionsUtil.sortMapByKeys(chainIdToStatusMap,
 				SortOrder.DESCENDING);
-		for (Entry<Integer, Collection<String>> entry : sortedMap.entrySet()) {
+		for (Entry<String, Collection<String>> entry : sortedMap.entrySet()) {
 			Collection<String> statusList = entry.getValue();
 
-			System.out.println("MISC: " + misc + " -- Chain ID: " + entry.getKey() + " -- " + statusList.toString());
 			// can only have one start/end pair
 			if (statusList.contains(START_STATUS_INDICATOR) && statusList.contains(END_STATUS_INDICATOR)) {
 				bothList.add(entry.getKey());
@@ -750,22 +840,34 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 			}
 		}
 
-		if (includeCorefType == IncludeCorefType.IDENT && bothList.size() > 1) {
-			throw new IllegalStateException(
-					"Should not have two complete IDENTITY chain members for a single token. If this occurs, "
-							+ "it should be caught earlier durin the chain merging step where the two chains should be merged into one.");
+		if (bothList.size() > 1) {
+			/*
+			 * this is allowable if only one of the ids in bothList is a non-discontinuous mention
+			 * id, i.e. it doesn't have a character
+			 */
+			int nonDiscontinousCount = 0;
+			for (String id : bothList) {
+				if (id.matches("\\d+")) {
+					nonDiscontinousCount++;
+				}
+			}
+			if (nonDiscontinousCount > 1) {
+				throw new IllegalStateException(
+						"Should not have two complete IDENTITY chain members for a single token. If this occurs, "
+								+ "it should be caught earlier during the chain merging step where the two chains should be merged into one.");
+			}
 		}
 
 		String chainRepStr = "";
-		if (bothList.size() == 1) {
-			chainRepStr = "(" + bothList.get(0) + ")";
+		for (String both : bothList) {
+			chainRepStr = "(" + both + ")" + (chainRepStr.isEmpty() ? "" : "|") + chainRepStr;
 		}
 
-		for (Integer start : startList) {
+		for (String start : startList) {
 			chainRepStr = "(" + start + (chainRepStr.isEmpty() ? "" : "|") + chainRepStr;
 		}
 
-		for (Integer end : endList) {
+		for (String end : endList) {
 			chainRepStr = chainRepStr + (chainRepStr.isEmpty() ? "" : "|") + end + ")";
 		}
 
@@ -774,6 +876,48 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		}
 
 		return chainRepStr;
+	}
+
+	public static String toLogString(Collection<TextAnnotation> taList) {
+		StringBuffer sb = new StringBuffer();
+		for (TextAnnotation ta : taList) {
+			sb.append(((sb.toString().isEmpty()) ? "" : "\n") + toLogString("", ta));
+		}
+		return sb.toString();
+	}
+
+	public static String toLogString(TextAnnotation ta) {
+		return toLogString("", ta);
+	}
+
+	public static String toLogString(String linePrefix, TextAnnotation ta) {
+		StringBuffer sb = new StringBuffer();
+		sb.append(linePrefix + ta.getDocumentID() + " | " + Span.toString(ta.getSpans()) + " | "
+				+ ta.getClassMention().getMentionName() + " | '" + ta.getCoveredText() + "'");
+		Collection<ComplexSlotMention> csms = ta.getClassMention().getComplexSlotMentions();
+		Map<String, Collection<String>> csmNameToAnnotStrMap = new HashMap<String, Collection<String>>();
+		for (ComplexSlotMention csm : csms) {
+			String csmName = csm.getMentionName();
+			List<TextAnnotation> slotFillerAnnots = new ArrayList<TextAnnotation>();
+			for (ClassMention cm : csm.getClassMentions()) {
+				slotFillerAnnots.add(cm.getTextAnnotation());
+			}
+			Collections.sort(slotFillerAnnots, TextAnnotation.BY_SPAN());
+			for (TextAnnotation slotFillerAnnot : slotFillerAnnots) {
+				CollectionsUtil.addToOne2ManyMap(csmName, toLogString(slotFillerAnnot), csmNameToAnnotStrMap);
+			}
+		}
+
+		Map<String, Collection<String>> sortedMap = CollectionsUtil.sortMapByKeys(csmNameToAnnotStrMap,
+				SortOrder.ASCENDING);
+
+		for (Entry<String, Collection<String>> entry : sortedMap.entrySet()) {
+			for (String val : entry.getValue()) {
+				sb.append("\n" + linePrefix + "_          " + entry.getKey() + " -- " + val);
+			}
+		}
+		return sb.toString();
+
 	}
 
 }
