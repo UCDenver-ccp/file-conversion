@@ -7,6 +7,7 @@
         <xs:choice maxOccurs="unbounded">
           <xs:element ref="classMention"/>
           <xs:element ref="complexSlotMention"/>
+          <xs:element ref="stringSlotMention"/>
         </xs:choice>
       </xs:sequence>
       <xs:attribute name="textSource" use="required" type="xs:NMTOKEN"/>
@@ -21,7 +22,7 @@
           <xs:element maxOccurs="unbounded" ref="span"/>
           <xs:element ref="spannedText"/>
         </xs:sequence>
-        <xs:element ref="creationDate"/>
+        <xs:element minOccurs="0" ref="creationDate"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
@@ -71,14 +72,28 @@
       <xs:attribute name="id" use="required" type="xs:NMTOKEN"/>
     </xs:complexType>
   </xs:element>
-  <xs:element name="mentionSlot">
-    <xs:complexType>
-      <xs:attribute name="id" use="required"/>
-    </xs:complexType>
-  </xs:element>
   <xs:element name="complexSlotMentionValue">
     <xs:complexType>
       <xs:attribute name="value" use="required" type="xs:NMTOKEN"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="stringSlotMention">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="mentionSlot"/>
+        <xs:element ref="stringSlotMentionValue"/>
+      </xs:sequence>
+      <xs:attribute name="id" use="required" type="xs:NCName"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="stringSlotMentionValue">
+    <xs:complexType>
+      <xs:attribute name="value" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="mentionSlot">
+    <xs:complexType>
+      <xs:attribute name="id" use="required"/>
     </xs:complexType>
   </xs:element>
 </xs:schema>
