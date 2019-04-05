@@ -48,6 +48,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import edu.ucdenver.ccp.common.collections.CollectionsUtil;
 import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.file.FileReaderUtil;
 import edu.ucdenver.ccp.common.io.StreamUtil;
@@ -55,6 +56,7 @@ import edu.ucdenver.ccp.common.string.RegExPatterns;
 import edu.ucdenver.ccp.file.conversion.DocumentReader;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
+import edu.ucdenver.ccp.nlp.core.annotation.SpanUtils;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationFactory;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultClassMention;
@@ -146,12 +148,10 @@ public class CoNLLUDocumentReader extends DocumentReader {
 			coveredText = "\"";
 		} else if (coveredText.equals("''")) {
 			coveredText = "\"";
-		} else if (coveredText.contains(",")) {
-			// allow for an optional space after the comma if there isn't one
-
-		}
+		} 
 		Span span = getSpan(coveredText, documentText, documentOffset);
-		return factory.createAnnotation(span.getSpanStart(), span.getSpanEnd(), coveredText,
+		return factory.createAnnotation(span.getSpanStart(), span.getSpanEnd(),
+				SpanUtils.getCoveredText(CollectionsUtil.createList(span), documentText),
 				new DefaultClassMention(partOfSpeechTag));
 	}
 
