@@ -115,7 +115,7 @@ public class BioNLPDocumentWriter extends DocumentWriter {
 			Span span = ta.getSpans().get(i);
 			sb.append(((i > 0) ? ";" : "") + span.getSpanStart() + " " + span.getSpanEnd());
 		}
-		sb.append("\t" + ta.getCoveredText());
+		sb.append("\t" + ta.getCoveredText().replaceAll("\\n", " "));
 
 		return sb.toString();
 	}
