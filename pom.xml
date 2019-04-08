@@ -168,15 +168,18 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>license-maven-plugin</artifactId>
-				<version>1.7</version>
+				<version>1.19</version>
 				<configuration>
 					<verbose>false</verbose>
 					<encoding>UTF-8</encoding>
-					<inceptionYear>2012</inceptionYear>
+					<inceptionYear>2019</inceptionYear>
 					<organizationName>Regents of the University of Colorado</organizationName>
 					<projectName>Colorado Computational Pharmacology's file conversion
 						project</projectName>
 					<licenseName>bsd_3</licenseName>
+					<excludes>
+						<exclude>src/main/java/org/cleartk/util/treebank/TreebankFormatParser.java</exclude>
+					</excludes>
 				</configuration>
 				<executions>
 					<execution>

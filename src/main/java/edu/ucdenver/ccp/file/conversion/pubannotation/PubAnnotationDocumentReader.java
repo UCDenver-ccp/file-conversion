@@ -1,13 +1,11 @@
 package edu.ucdenver.ccp.file.conversion.pubannotation;
 
-import java.io.IOException;
-
-/*
+/*-
  * #%L
  * Colorado Computational Pharmacology's file conversion
  * 						project
  * %%
- * Copyright (C) 2012 - 2019 Regents of the University of Colorado
+ * Copyright (C) 2019 Regents of the University of Colorado
  * %%
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -35,6 +33,8 @@ import java.io.IOException;
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
+
+import java.io.IOException;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;

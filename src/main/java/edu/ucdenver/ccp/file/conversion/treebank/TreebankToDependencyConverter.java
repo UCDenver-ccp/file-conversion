@@ -1,13 +1,11 @@
 package edu.ucdenver.ccp.file.conversion.treebank;
 
-import java.io.BufferedWriter;
-
-/*
+/*-
  * #%L
  * Colorado Computational Pharmacology's file conversion
  * 						project
  * %%
- * Copyright (C) 2012 - 2019 Regents of the University of Colorado
+ * Copyright (C) 2019 Regents of the University of Colorado
  * %%
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -35,6 +33,8 @@ import java.io.BufferedWriter;
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
+
+import java.io.BufferedWriter;
 
 import java.io.File;
 import java.io.IOException;
