@@ -198,19 +198,28 @@
 				</executions>
 			</plugin>
 			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>3.1.1</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.2.1</version>
 				<configuration>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
+					<outputFile>target/${project.name}-onejar-${project.version}.jar</outputFile>
+					<!-- Ideally we would use the minimizeJar=true setting, however minimizing 
+						the jar appears to make the resulting artifact fragile, i.e. it is likely 
+						missing required resources. The filters below were a first attempt at including 
+						all required resources while still minimizing the size of the jar file, however 
+						the list below is incomplete. com.sun.xml.bind.v2.ContextFactory is missing 
+						among possibly others. So for now, we build the full jar. -->
+					<!-- <minimizeJar>true</minimizeJar> <filters> <filter> <artifact>log4j:log4j</artifact> 
+						<includes> <include>**</include> </includes> </filter> <filter> <artifact>commons-logging:commons-logging</artifact> 
+						<includes> <include>**</include> </includes> </filter> <filter> <artifact>org.apache.uima:uimaj-core</artifact> 
+						<includes> <include>**</include> </includes> </filter> <filter> <artifact>org.cleartk:cleartk-type-system</artifact> 
+						<includes> <include>**</include> </includes> </filter> </filters> -->
 				</configuration>
 				<executions>
 					<execution>
-						<id>make-assembly</id> <!-- this is used for inheritance merges -->
-						<phase>package</phase> <!-- bind to the packaging phase -->
+						<phase>package</phase>
 						<goals>
-							<goal>single</goal>
+							<goal>shade</goal>
 						</goals>
 					</execution>
 				</executions>
