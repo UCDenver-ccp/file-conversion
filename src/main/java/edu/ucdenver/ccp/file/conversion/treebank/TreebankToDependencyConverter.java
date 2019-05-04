@@ -54,8 +54,8 @@ import edu.ucdenver.ccp.common.file.reader.StreamLineIterator;
 import edu.ucdenver.ccp.common.io.ClassPathUtil;
 
 /**
- * Utility for converting treebank constituency parses to dependency parses.
- * This utility use the ClearNLP library to facilitate the conversion.
+ * Utility for converting treebank constituency parses to dependency parses. This utility use the
+ * ClearNLP library to facilitate the conversion.
  */
 public class TreebankToDependencyConverter {
 
@@ -70,22 +70,23 @@ public class TreebankToDependencyConverter {
 					treeFile.getAbsolutePath(), "-l", "english" };
 			C2DConvert.main(convertArgs);
 			File outputFile = new File(treeFile.getAbsolutePath() + ".dep");
-			File conlluFile = addBlankColumn6(outputFile);
-			FileUtil.copy(conlluFile, dependencyDirectory);
+			File conllFile = repeatPOSColumn(outputFile);
+			FileUtil.copy(conllFile, dependencyDirectory);
+			FileUtil.deleteFile(conllFile);
 			FileUtil.deleteFile(outputFile);
-			FileUtil.deleteFile(conlluFile);
 		}
 	}
 
 	/**
 	 * @param outputFile
-	 * @return a file in CoNLL-U format - add a blank column after column 5,
-	 *         drop the final column
+	 * @return the original conll file format has two columns for part of speech. One course-grained
+	 *         and one fine-grained. If fine-grained is not available it is supposed to be equal to
+	 *         the course-grained, so we repeat the POS column here.
 	 * @throws IOException
 	 */
-	static File addBlankColumn6(File depFile) throws IOException {
+	static File repeatPOSColumn(File depFile) throws IOException {
 		CharacterEncoding encoding = CharacterEncoding.UTF_8;
-		File conlluFile = new File(StringUtils.removeSuffix(depFile.getAbsolutePath(), "dep") + "conllu");
+		File conlluFile = new File(StringUtils.removeSuffix(depFile.getAbsolutePath(), "tree.dep") + "conll");
 
 		try (BufferedWriter writer = FileWriterUtil.initBufferedWriter(conlluFile)) {
 			for (StreamLineIterator lineIter = new StreamLineIterator(depFile, encoding); lineIter.hasNext();) {
@@ -95,14 +96,15 @@ public class TreebankToDependencyConverter {
 					writer.write("\n");
 				} else {
 					List<String> tokens = new ArrayList<String>(Arrays.asList(line.split("\\t")));
-					tokens.add(5, "_");
+					// replicate the POS for both course and fine-grained columns
+					tokens.add(4, tokens.get(3));
+					// remove final column (which is empty) to get down to 10 columns total
 					tokens.remove(tokens.size() - 1);
 					String updatedLine = CollectionsUtil.createDelimitedString(tokens, "\t");
 					writer.write(updatedLine + "\n");
 				}
 			}
 		}
-
 		return conlluFile;
 	}
 

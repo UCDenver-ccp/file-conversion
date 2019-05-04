@@ -1,5 +1,7 @@
 package edu.ucdenver.ccp.file.conversion.treebank;
 
+import static org.junit.Assert.assertEquals;
+
 /*-
  * #%L
  * Colorado Computational Pharmacology's file conversion
@@ -69,11 +71,18 @@ public class TreebankToDependencyConverterTest {
 		File inputFile = folder.newFile("input.dep");
 		FileWriterUtil.printLines(lines, inputFile, encoding);
 
-		List<String> expectedLines = CollectionsUtil.createList("1\tIntraocular\tintraocular\tJJ\t_\t_\t2\tamod\t_\t_",
-				"2\tpressure\tpressure\tNN\t_\t_\t9\tdep\t_\t_");
+		List<String> expectedLines = CollectionsUtil.createList(
+				"1\tIntraocular\tintraocular\tJJ\tJJ\t_\t2\tamod\t_\t_",
+				"2\tpressure\tpressure\tNN\tNN\t_\t9\tdep\t_\t_");
 
-		File outputFile = TreebankToDependencyConverter.addBlankColumn6(inputFile);
+		File outputFile = TreebankToDependencyConverter.repeatPOSColumn(inputFile);
 		List<String> observedLines = FileReaderUtil.loadLinesFromFile(outputFile, encoding);
+
+		// Line should be: ID FORM LEMMA CPOSTAG POSTAG FEATS HEAD DEPREL PHEAD PDEPREL
+		
+		for (String line : observedLines) {
+			assertEquals(10, line.split("\\t").length);
+		}
 
 		assertTrue(FileComparisonUtil.hasExpectedLines(observedLines, expectedLines, null, LineOrder.AS_IN_FILE,
 				ColumnOrder.AS_IN_FILE, LineTrim.OFF, ShowWhiteSpace.OFF));
