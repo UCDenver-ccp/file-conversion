@@ -894,48 +894,6 @@ public class CoNLLCoref2012DocumentWriterTest {
 				ColumnOrder.AS_IN_FILE, LineTrim.OFF, ShowWhiteSpace.OFF));
 	}
 
-	@Test
-	public void testRedundantChainsInOutput() throws IOException {
-		CharacterEncoding encoding = CharacterEncoding.UTF_8;
-		File docTextFile = new File(
-				"/Users/bill/Dropbox/work/projects/craft-shared-task-2019/CRAFT.bill.git/articles/txt/15314659.txt");
-		TextDocument td = new KnowtatorDocumentReader().readDocument("15314659", "PMC",
-				new File(
-						"/Users/bill/Dropbox/work/projects/craft-shared-task-2019/CRAFT.bill.git/coreference-annotation/knowtator/15314659.txt.knowtator.xml"),
-				docTextFile, encoding);
-
-		String docText = StreamUtil
-				.toString(new InputStreamReader(new FileInputStream(docTextFile), encoding.getDecoder()));
-
-		String docTitle = (docText.substring(0, 111));
-
-		List<TextAnnotation> taList = new ArrayList<TextAnnotation>();
-		for (TextAnnotation ta : td.getAnnotations()) {
-			if (ta.getAggregateSpan().getSpanEnd() < 111) {
-				taList.add(ta);
-				if (ta.getClassMention().getComplexSlotMentionNames()
-						.contains(CoNLLCoref2012DocumentReader.IDENTITY_CHAIN_COREFERRING_STRINGS_SLOT)) {
-					ComplexSlotMention csm = ta.getClassMention().getComplexSlotMentionByName(
-							CoNLLCoref2012DocumentReader.IDENTITY_CHAIN_COREFERRING_STRINGS_SLOT);
-					List<ClassMention> cmToRemove = new ArrayList<ClassMention>();
-					for (ClassMention cm : csm.getClassMentions()) {
-						if (cm.getTextAnnotation().getAggregateSpan().getSpanEnd() > 111) {
-							cmToRemove.add(cm);
-						}
-					}
-					for (ClassMention cm : cmToRemove) {
-						csm.getClassMentions().remove(cm);
-					}
-				}
-			}
-		}
-
-		// for (TextAnnotation ta : taList) {
-		// System.out.println(ta);
-		// }
-
-	}
-
 	/**
 	 * Test that annotations with discontinuous spans are properly represented in ident chains
 	 * 
