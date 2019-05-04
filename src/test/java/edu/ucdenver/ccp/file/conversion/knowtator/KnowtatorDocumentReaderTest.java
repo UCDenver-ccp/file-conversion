@@ -121,17 +121,4 @@ public class KnowtatorDocumentReaderTest {
 		}
 		
 	}
-	
-	
-	@Test
-	public void test() throws IOException {
-		CharacterEncoding encoding = CharacterEncoding.UTF_8;
-		File inputFile = new File("/Users/bill/Dropbox/work/projects/craft-shared-task-2019/knowtator-xsd-gen/sample-xml/11532192.txt.knowtator.xml");
-		File documentTextFile = new File("/Users/bill/Dropbox/work/projects/craft-shared-task-2019/CRAFT.bill.git/articles/txt/11532192.txt");
-		
-		TextDocument td = new KnowtatorDocumentReader().readDocument("12345", "PMC", inputFile, documentTextFile, encoding);
-		
-		
-	}
-
 }
