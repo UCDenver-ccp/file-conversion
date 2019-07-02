@@ -55,6 +55,7 @@ import edu.ucdenver.ccp.common.io.StreamUtil;
 import edu.ucdenver.ccp.common.string.RegExPatterns;
 import edu.ucdenver.ccp.file.conversion.DocumentReader;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
+import edu.ucdenver.ccp.file.conversion.util.DocumentReaderUtil;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
 import edu.ucdenver.ccp.nlp.core.annotation.SpanUtils;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
@@ -68,7 +69,10 @@ public class CoNLLUDocumentReader extends DocumentReader {
 			InputStream documentTextStream, CharacterEncoding encoding) throws IOException {
 		String documentText = StreamUtil.toString(new InputStreamReader(documentTextStream, encoding.getDecoder()));
 		TextDocument td = new TextDocument(sourceId, sourceDb, documentText);
-		td.addAnnotations(getAnnotations(inputStream, documentText, encoding));
+		
+		List<TextAnnotation> annotations = getAnnotations(inputStream, documentText, encoding);
+		DocumentReaderUtil.validateSpans(annotations, documentText, sourceId);
+		td.addAnnotations(annotations);
 		return td;
 	}
 

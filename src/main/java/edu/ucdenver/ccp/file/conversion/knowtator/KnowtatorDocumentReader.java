@@ -60,6 +60,7 @@ import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.io.StreamUtil;
 import edu.ucdenver.ccp.file.conversion.DocumentReader;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
+import edu.ucdenver.ccp.file.conversion.util.DocumentReaderUtil;
 import edu.ucdenver.ccp.knowtator.Annotation;
 import edu.ucdenver.ccp.knowtator.Annotations;
 import edu.ucdenver.ccp.knowtator.Annotator;
@@ -88,7 +89,9 @@ public class KnowtatorDocumentReader extends DocumentReader {
 		String documentText = StreamUtil.toString(new InputStreamReader(documentTextStream, encoding.getDecoder()));
 		TextDocument td = new TextDocument(sourceId, sourceDb, documentText);
 		try {
-			td.addAnnotations(getAnnotations(inputStream));
+			List<TextAnnotation> annotations = getAnnotations(inputStream);
+			DocumentReaderUtil.validateSpans(annotations, documentText, sourceId);
+			td.addAnnotations(annotations);
 		} catch (XMLStreamException | JAXBException e) {
 			throw new IOException("Error while reading Knowtator2 file.", e);
 		}

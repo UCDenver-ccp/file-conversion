@@ -37,6 +37,7 @@ package edu.ucdenver.ccp.file.conversion.bionlp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -50,6 +51,7 @@ import edu.ucdenver.ccp.common.io.StreamUtil;
 import edu.ucdenver.ccp.common.string.RegExPatterns;
 import edu.ucdenver.ccp.file.conversion.DocumentReader;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
+import edu.ucdenver.ccp.file.conversion.util.DocumentReaderUtil;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationFactory;
@@ -91,7 +93,10 @@ public class BioNLPDocumentReader extends DocumentReader {
 		/* process relation annotations */
 		processRelationAnnotations(relationLines, encoding, annotIdToAnnotMap);
 		/* add annotations to document */
-		td.addAnnotations(annotIdToAnnotMap.values());
+		
+		Collection<TextAnnotation> annotations = annotIdToAnnotMap.values();
+		DocumentReaderUtil.validateSpans(annotations, documentText, sourceId);
+		td.addAnnotations(annotations);
 
 		return td;
 	}

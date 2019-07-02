@@ -52,6 +52,7 @@ import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.file.conversion.pubannotation.PubAnnotationDocumentWriter.Denotation;
 import edu.ucdenver.ccp.file.conversion.pubannotation.PubAnnotationDocumentWriter.Document;
 import edu.ucdenver.ccp.file.conversion.pubannotation.PubAnnotationDocumentWriter.Relation;
+import edu.ucdenver.ccp.file.conversion.util.DocumentReaderUtil;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationFactory;
@@ -64,7 +65,9 @@ public class PubAnnotationDocumentReader extends DocumentReader {
 			InputStream documentTextStream, CharacterEncoding encoding) throws IOException {
 		String documentText = StreamUtil.toString(new InputStreamReader(documentTextStream, encoding.getDecoder()));
 		TextDocument td = new TextDocument(sourceId, sourceDb, documentText);
-		td.addAnnotations(getAnnotations(inputStream, encoding));
+		List<TextAnnotation> annotations = getAnnotations(inputStream, encoding);
+		DocumentReaderUtil.validateSpans(annotations, documentText, sourceId);
+		td.addAnnotations(annotations);
 		return td;
 	}
 

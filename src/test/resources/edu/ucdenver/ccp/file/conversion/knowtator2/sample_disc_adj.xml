@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<knowtator-project>
+    <document id="17069463" text-file="17069463.txt">
+		<annotation annotator="Annotator" id="265" type="identity">
+            <class id="IDENTITY chain" label="IDENTITY chain"/>
+            <span end="23974" id="17069463-1486" start="23929">inbred RanBP2+/− mice on high-fat (~10% fat) </span>
+            <span end="23978" id="17069463-1487" start="23974">diet</span>
+        </annotation>
+        <annotation annotator="Annotator" id="267" type="identity">
+            <class id="IDENTITY chain" label="IDENTITY chain"/>
+            <span end="23935" id="17069463-1486" start="23929">inbred</span>
+            <span end="23945" id="17069463-1487" start="23936">RanBP2+/−</span>
+            <span end="23950" id="17069463-1487" start="23946">mice</span>
+            <span end="23953" id="17069463-1487" start="23951">on</span>
+            <span end="23962" id="17069463-1487" start="23954">high-fat</span>
+            <span end="23973" id="17069463-1487" start="23963">(~10% fat)</span>
+            <span end="23978" id="17069463-1487" start="23974">diet</span>
+        </annotation>
+        <annotation annotator="Annotator" id="266" type="identity">
+            <class id="IDENTITY chain" label="IDENTITY chain"/>
+            <span end="23978" id="17069463-1490" start="23954">high-fat (~10% fat) diet</span>
+        </annotation>
+         <annotation annotator="Annotator" id="268" type="identity">
+            <class id="IDENTITY chain" label="IDENTITY chain"/>
+            <span end="23962" id="17069463-1490" start="23954">high-fat</span>
+            <span end="23978" id="17069463-1487" start="23974">diet</span>
+        </annotation>
+        <graph-space id="Old Knowtator Relations">
+        </graph-space>
+    </document>
+</knowtator-project>

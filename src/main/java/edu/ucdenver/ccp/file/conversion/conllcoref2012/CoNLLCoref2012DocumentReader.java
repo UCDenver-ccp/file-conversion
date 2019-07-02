@@ -55,6 +55,7 @@ import edu.ucdenver.ccp.common.string.StringUtil;
 import edu.ucdenver.ccp.file.conversion.DocumentReader;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUDocumentReader;
+import edu.ucdenver.ccp.file.conversion.util.DocumentReaderUtil;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
 import edu.ucdenver.ccp.nlp.core.annotation.SpanUtils;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
@@ -79,7 +80,10 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 		// document text is used to get the spans for all annotations
 		String documentText = StreamUtil.toString(new InputStreamReader(documentTextStream, encoding.getDecoder()));
 		TextDocument td = new TextDocument(sourceId, sourceDb, documentText);
-		td.addAnnotations(getAnnotations(inputStream, sourceId, documentText, encoding));
+		
+		List<TextAnnotation> annotations = getAnnotations(inputStream, sourceId, documentText, encoding);
+		DocumentReaderUtil.validateSpans(annotations, documentText, sourceId);
+		td.addAnnotations(annotations);
 		return td;
 
 	}
