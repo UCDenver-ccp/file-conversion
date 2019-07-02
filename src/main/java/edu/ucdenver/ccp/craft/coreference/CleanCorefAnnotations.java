@@ -99,9 +99,9 @@ import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultComplexSlotMention;
  */
 public class CleanCorefAnnotations {
 
-	private static final String PARTONYMY_RELATION = "PARTONYMY relation";
+	public static final String PARTONYMY_RELATION = "PARTONYMY relation";
 	private static final String KNOWTATOR_SUPPORT_CLASS = "knowtator support class";
-	private static final String NONREFERENTIAL_PRONOUN = "Nonreferential pronoun";
+	public static final String NONREFERENTIAL_PRONOUN = "Nonreferential pronoun";
 	private static final Logger logger = Logger.getLogger(CleanCorefAnnotations.class);
 
 	public static void createKnowtator2Files(File inputDirectory, File txtDirectory, File outputDirectory) throws IOException {

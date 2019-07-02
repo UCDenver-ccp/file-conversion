@@ -42,7 +42,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,14 +61,12 @@ import edu.ucdenver.ccp.common.file.FileComparisonUtil.LineTrim;
 import edu.ucdenver.ccp.common.file.FileComparisonUtil.ShowWhiteSpace;
 import edu.ucdenver.ccp.common.file.FileReaderUtil;
 import edu.ucdenver.ccp.common.io.ClassPathUtil;
-import edu.ucdenver.ccp.common.io.StreamUtil;
+import edu.ucdenver.ccp.craft.coreference.CleanCorefAnnotations;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUDocumentWriter;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUFileRecord;
-import edu.ucdenver.ccp.file.conversion.knowtator.KnowtatorDocumentReader;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationFactory;
-import edu.ucdenver.ccp.nlp.core.mention.ClassMention;
 import edu.ucdenver.ccp.nlp.core.mention.ComplexSlotMention;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultClassMention;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultComplexSlotMention;
@@ -100,6 +97,9 @@ public class CoNLLCoref2012DocumentWriterTest {
 				new DefaultClassMention("Identity Chain"));
 		TextAnnotation carNPAnnot = factory.createAnnotation(8, 11, "car", new DefaultClassMention("Noun Phrase"));
 		TextAnnotation itNPAnnot = factory.createAnnotation(13, 15, "It", new DefaultClassMention("Noun Phrase"));
+		
+		// this use of It is not a non-referential pronoun, but we will add one here just to make sure that it gets removed
+		TextAnnotation itNonreferentialPronounAnnot = factory.createAnnotation(13, 15, "It", new DefaultClassMention(CleanCorefAnnotations.NONREFERENTIAL_PRONOUN));
 
 		/* form an identity chain of 'car' and 'It' */
 		ComplexSlotMention csm = new DefaultComplexSlotMention("Coreferring strings");
@@ -110,6 +110,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 		annotations.add(identChainAnnot);
 		annotations.add(carNPAnnot);
 		annotations.add(itNPAnnot);
+		annotations.add(itNonreferentialPronounAnnot);
 
 		TextDocument td = new TextDocument("12345", "PMC", documentText);
 		td.addAnnotations(annotations);

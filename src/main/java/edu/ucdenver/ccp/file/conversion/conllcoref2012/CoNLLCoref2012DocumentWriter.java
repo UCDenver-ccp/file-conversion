@@ -57,6 +57,7 @@ import edu.ucdenver.ccp.common.collections.CollectionsUtil;
 import edu.ucdenver.ccp.common.collections.CollectionsUtil.SortOrder;
 import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.file.FileWriterUtil;
+import edu.ucdenver.ccp.craft.coreference.CleanCorefAnnotations;
 import edu.ucdenver.ccp.file.conversion.DocumentWriter;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUDocumentWriter;
@@ -113,6 +114,21 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		 */
 		List<TextAnnotation> annotations = td.getAnnotations();
 		trimAnnotations(annotations, td.getText());
+
+		/*
+		 * remove any "Nonreferential pronoun" annotations. These are part of the CRAFT coreference
+		 * project, but should not be included in the CoNLL-Coref 2011/12 output format.
+		 */
+		List<TextAnnotation> annotsToRemove = new ArrayList<TextAnnotation>();
+		for (TextAnnotation annot : annotations) {
+			if (annot.getClassMention().getMentionName().equals(CleanCorefAnnotations.NONREFERENTIAL_PRONOUN)
+					|| annot.getClassMention().getMentionName().equals(CleanCorefAnnotations.PARTONYMY_RELATION)) {
+				annotsToRemove.add(annot);
+			}
+		}
+		for (TextAnnotation annotToRemove : annotsToRemove) {
+			annotations.remove(annotToRemove);
+		}
 
 		/*
 		 * TD assumed to contain sentence & token/pos annotations + single/multi-word base NP
