@@ -78,5 +78,25 @@ public class DocumentReaderUtilTest {
 		assertEquals(expectedUpdatedSpans, updatedSpans);
 
 	}
+	
+	
+	@Test
+	public void testOverlappingSpanConsolidation() {
+	                   	    //                                                                                                     1         1         1         1         1         1         1              
+		                    //           1         2         3         4         5         6         7         8         9         0         1         2         3         4         5         6        
+		                    // 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+		String documentText = "Paraffin sections of wild-type (AtrxWT/Y) and carrier female (AtrxWT/null) 7.5 dbc embryos (dissected in their deciduas) were stained with the anti-ATRX antibody.";
+
+		Span wildTypeSpan = new Span(21, 30);
+		Span carrierFemaleSpan = new Span(46, 60);
+		Span sevenPointFiveSpan = new Span(75, 78);
+		Span sevenPointFiveDpcEmbryosSpan = new Span(75, 90);
+
+		List<Span> inputSpans = CollectionsUtil.createList(wildTypeSpan, carrierFemaleSpan, sevenPointFiveSpan, sevenPointFiveDpcEmbryosSpan);
+		List<Span> expectedUpdatedSpans = CollectionsUtil.createList(wildTypeSpan, carrierFemaleSpan, sevenPointFiveDpcEmbryosSpan);
+		List<Span> updatedSpans = DocumentReaderUtil.consolidateAdjacentSpans(inputSpans, documentText, "12345");
+		assertEquals(expectedUpdatedSpans, updatedSpans);
+
+	}
 
 }

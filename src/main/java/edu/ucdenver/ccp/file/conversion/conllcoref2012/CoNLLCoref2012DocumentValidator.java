@@ -95,13 +95,19 @@ public class CoNLLCoref2012DocumentValidator extends CoNLLCoref2012DocumentReade
 				String sourceId = conllCorefFile.getName().substring(0, conllCorefFile.getName().indexOf("."));
 				String sourceDb = "unknown";
 				File documentTextFile = new File(txtDirectory, sourceId + ".txt");
-				try {
-					new CoNLLCoref2012DocumentValidator().readDocument(sourceId, sourceDb, conllCorefFile,
-							documentTextFile, CharacterEncoding.UTF_8);
-				} catch (IllegalStateException invalidSpanException) {
-					validationPassed = false;
-					errorMessage.append("File: " + conllCorefFile.getAbsolutePath() + "\n"
-							+ invalidSpanException.getMessage() + "\n");
+				if (documentTextFile.exists()) {
+					try {
+						new CoNLLCoref2012DocumentValidator().readDocument(sourceId, sourceDb, conllCorefFile,
+								documentTextFile, CharacterEncoding.UTF_8);
+					} catch (IllegalStateException invalidSpanException) {
+						validationPassed = false;
+						errorMessage.append("File: " + conllCorefFile.getAbsolutePath() + "\n"
+								+ invalidSpanException.getMessage() + "\n");
+					}
+				} else {
+					System.err
+							.println("WARNING -- Unable to validate the following as no corresponding txt file exists: "
+									+ conllCorefFile.getAbsolutePath());
 				}
 			}
 		} catch (IOException e) {
