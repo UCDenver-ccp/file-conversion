@@ -62,6 +62,7 @@ import edu.ucdenver.ccp.file.conversion.DocumentWriter;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUDocumentWriter;
 import edu.ucdenver.ccp.file.conversion.conllu.CoNLLUFileRecord;
+import edu.ucdenver.ccp.file.conversion.util.DocumentReaderUtil;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
 import edu.ucdenver.ccp.nlp.core.annotation.SpanUtils;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
@@ -151,7 +152,7 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		/*
 		 * if there is an annotation that is a member of >1 chains, then those chains should be
 		 * combined - this step fixes some annotation errors. Ideally this step would not change the
-		 * annotation at all. This step is only relevan for IDENTITY chains.
+		 * annotation at all. This step is only relevant for IDENTITY chains.
 		 */
 		chains = mergeChainsIfSharedAnnotation(chains, MatchDueTo.SHARED_MENTION);
 
@@ -182,6 +183,18 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		 * re-merge in case there were collision when matching token boundaries
 		 */
 		chains = mergeChainsIfSharedAnnotation(chains, MatchDueTo.SPAN_TO_TOKEN_BOUNDARY_MATCH);
+
+		/*
+		 * mapping spans to token boundaries can also cause instances of nested discontinuous spans,
+		 * so we need to fix any nested discontinuous spans here. There was a case in 16628246.xml
+		 * (coreference annotations) where 7.5 dbc embryos was annotated as 7 .. 5 dbc embryos. In
+		 * this case the 7 maps to the 7.5 token and the 5 also maps to the 7.5 token, so the final
+		 * annotation had two instances of the 7.5 token span. Seems like the original annotation
+		 * was faulty, i.e. the 7 .. 5 split, but it happened, so we will put a fix for it here.
+		 */
+		for (Set<TextAnnotation> chain : chains) {
+			DocumentReaderUtil.validateSpans(chain, td.getText(), td.getSourceid());
+		}
 
 		/*
 		 * Sort the chains to provide reproducibility in the chain numbering. This is beneficial for
