@@ -38,9 +38,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
+import edu.ucdenver.ccp.common.collections.CollectionsUtil;
 import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.file.FileUtil;
 import edu.ucdenver.ccp.common.io.StreamUtil;
@@ -48,6 +52,8 @@ import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.file.conversion.util.DocumentReaderUtil;
 import edu.ucdenver.ccp.nlp.core.annotation.Span;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
+import edu.ucdenver.ccp.nlp.core.mention.ClassMention;
+import edu.ucdenver.ccp.nlp.core.mention.ComplexSlotMention;
 
 /**
  * Parses a CoNLLCoref 2011/12 formatted file and throws an exception if any annotations with
@@ -74,13 +80,58 @@ public class CoNLLCoref2012DocumentValidator extends CoNLLCoref2012DocumentReade
 						+ Span.toString(ta.getSpans()) + " -- " + ta.getCoveredText() + "\n");
 			}
 			throw new IllegalStateException(
-					"Detected annotation(s) with invalid spans. Discontinuous spans cannot be overlapping or contiguous. Please adjust the spans for the following annotations accordingly:\n"
+					"Detected one or more annotations with overlapping or adjacent (contiguous) discontinuous spans. "
+							+ "Discontinuous spans cannot be overlapping or contiguous."
+							+ "Annotations with discontinuous spans must not have spans that overlap, e.g. [0..10][7..8], and "
+							+ "also must not have adjacent spans or spans separated only by whitespace, e.g. [0..10][11-15]. "
+							+ "Please adjust as necessary. See annotations with invalid discontinuous spans listed below:\n"
 							+ sb.toString());
+		}
+
+		String errorMessages = checkForRepeatedChainMembers(annotations);
+		if (!errorMessages.isEmpty()) {
+			throw new IllegalStateException(
+					"Detected redundant annotation(s) appearing in a single Identity Chain, or annotation(s) appearing "
+							+ "in multiple identity chains. Please ensure noun phrase annotations are members of only one identity "
+							+ "chain, and that there are no duplicate members of any identity chain. Specific error messages listed below:\n"
+							+ errorMessages);
 		}
 
 		td.addAnnotations(annotations);
 		return td;
 
+	}
+
+	private String checkForRepeatedChainMembers(List<TextAnnotation> annotations) {
+		StringBuffer errorMessages = new StringBuffer();
+		Map<TextAnnotation, Set<Integer>> npAnnots = new HashMap<TextAnnotation, Set<Integer>>();
+		int chainId = 0;
+		for (TextAnnotation annot : annotations) {
+			if (annot.getClassMention().getMentionName().equals("IDENTITY chain")) {
+				chainId++;
+				ComplexSlotMention csm = annot.getClassMention().getComplexSlotMentionByName("Coreferring strings");
+				for (ClassMention cm : csm.getClassMentions()) {
+					TextAnnotation ta = cm.getTextAnnotation();
+					if (npAnnots.containsKey(ta)) {
+						Set<Integer> chainIds = npAnnots.get(ta);
+						if (chainIds.contains(chainId)) {
+							errorMessages.append("Observed redundant annotation in a single chain -- document: "
+									+ ta.getDocumentID() + " spans" + Span.toString(ta.getSpans()) + " covered_text: "
+									+ ta.getCoveredText() + "\n");
+						} else {
+							errorMessages.append("Observed annotation in multiple chains -- document: "
+									+ ta.getDocumentID() + " spans" + Span.toString(ta.getSpans()) + " covered_text: "
+									+ ta.getCoveredText() + "\n");
+						}
+						npAnnots.get(ta).add(chainId);
+					} else {
+						Set<Integer> chainIds = CollectionsUtil.createSet(chainId);
+						npAnnots.put(ta, chainIds);
+					}
+				}
+			}
+		}
+		return errorMessages.toString();
 	}
 
 	public static void main(String[] args) {
@@ -115,12 +166,7 @@ public class CoNLLCoref2012DocumentValidator extends CoNLLCoref2012DocumentReade
 		}
 
 		if (!validationPassed) {
-			throw new IllegalStateException(
-					"Detected one or more annotations with overlapping or adjacent (contiguous) discontinuous spans. "
-							+ "Annotations with discontinuous spans must not have spans that overlap, e.g. [0..10][7..8], and "
-							+ "also must not have adjacent spans or spans separated only by whitespace, e.g. [0..10][11-15]. "
-							+ "Please adjust as necessary. See annotations with invalid discontinuous spans listed below:\n"
-							+ errorMessage.toString());
+			throw new IllegalStateException("Coreference file validation FAILED. " + errorMessage.toString());
 		}
 
 	}

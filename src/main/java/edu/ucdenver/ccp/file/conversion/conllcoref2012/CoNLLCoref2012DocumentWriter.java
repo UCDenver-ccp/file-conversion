@@ -180,11 +180,6 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		mapSpansToTokenBoundaries(chains, sortedTokenStartIndexToRecordMap, sortedTokenEndIndexToRecordMap);
 
 		/*
-		 * re-merge in case there were collision when matching token boundaries
-		 */
-		chains = mergeChainsIfSharedAnnotation(chains, MatchDueTo.SPAN_TO_TOKEN_BOUNDARY_MATCH);
-
-		/*
 		 * mapping spans to token boundaries can also cause instances of nested discontinuous spans,
 		 * so we need to fix any nested discontinuous spans here. There was a case in 16628246.xml
 		 * (coreference annotations) where 7.5 dbc embryos was annotated as 7 .. 5 dbc embryos. In
@@ -194,7 +189,32 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 		 */
 		for (Set<TextAnnotation> chain : chains) {
 			DocumentReaderUtil.validateSpans(chain, td.getText(), td.getSourceid());
+
+			Set<TextAnnotation> annots = new HashSet<TextAnnotation>();
+			Set<TextAnnotation> redundantAnnots = new HashSet<TextAnnotation>();
+			for (TextAnnotation ta : chain) {
+				if (annots.contains(ta)) {
+					redundantAnnots.add(ta);
+				} else {
+					annots.add(ta);
+				}
+			}
+
+			if (!redundantAnnots.isEmpty()) {
+				System.out.println("!!!!!!!!!!!!!! OBSERVED REDUNDANT ANNOTATION IN SINGLE CHAIN... removing it.");
+				System.out.println("CHAIN SIZE BEFORE: " + chain.size());
+				for (TextAnnotation redundantTa : redundantAnnots) {
+					chain.remove(redundantTa);
+				}
+				System.out.println("CHAIN SIZE AFTER: " + chain.size());
+			}
+
 		}
+
+		/*
+		 * re-merge in case there were collisions when matching token boundaries
+		 */
+		chains = mergeChainsIfSharedAnnotation(chains, MatchDueTo.SPAN_TO_TOKEN_BOUNDARY_MATCH);
 
 		/*
 		 * Sort the chains to provide reproducibility in the chain numbering. This is beneficial for
