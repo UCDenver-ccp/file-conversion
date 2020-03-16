@@ -53,6 +53,7 @@ import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.file.FileReaderUtil;
 import edu.ucdenver.ccp.common.io.StreamUtil;
 import edu.ucdenver.ccp.common.string.RegExPatterns;
+import edu.ucdenver.ccp.common.string.StringUtil;
 import edu.ucdenver.ccp.file.conversion.DocumentReader;
 import edu.ucdenver.ccp.file.conversion.TextDocument;
 import edu.ucdenver.ccp.file.conversion.util.DocumentReaderUtil;
@@ -69,7 +70,7 @@ public class CoNLLUDocumentReader extends DocumentReader {
 			InputStream documentTextStream, CharacterEncoding encoding) throws IOException {
 		String documentText = StreamUtil.toString(new InputStreamReader(documentTextStream, encoding.getDecoder()));
 		TextDocument td = new TextDocument(sourceId, sourceDb, documentText);
-		
+
 		List<TextAnnotation> annotations = getAnnotations(inputStream, documentText, encoding);
 		DocumentReaderUtil.validateSpans(annotations, documentText, sourceId);
 		td.addAnnotations(annotations);
@@ -110,14 +111,22 @@ public class CoNLLUDocumentReader extends DocumentReader {
 			}
 			int sentenceEnd = documentOffset;
 
+			// account for extra whitespace in the document between sentences by checking to
+			// make sure the sentence does not start with a space
+			String substring = documentText.substring(sentenceStart, sentenceEnd);
+			while (StringUtil.startsWithRegex(substring, "\\s")) {
+				sentenceStart++;
+				substring = documentText.substring(sentenceStart, sentenceEnd);
+			}
+
 			TextAnnotation sentence = factory.createAnnotation(sentenceStart, sentenceEnd, "",
 					new DefaultClassMention("sentence"));
 
 			annotations.add(sentence);
 
 			/*
-			 * now go back and add the dependency relations. Note, this is
-			 * inefficient b/c we process each sentence twice.
+			 * now go back and add the dependency relations. Note, this is inefficient b/c
+			 * we process each sentence twice.
 			 */
 			tokenIndex = 1;
 			for (CoNLLURecordReader rr = new CoNLLURecordReader(new ByteArrayInputStream(sentenceLines.getBytes()),
@@ -152,7 +161,7 @@ public class CoNLLUDocumentReader extends DocumentReader {
 			coveredText = "\"";
 		} else if (coveredText.equals("''")) {
 			coveredText = "\"";
-		} 
+		}
 		Span span = getSpan(coveredText, documentText, documentOffset);
 		return factory.createAnnotation(span.getSpanStart(), span.getSpanEnd(),
 				SpanUtils.getCoveredText(CollectionsUtil.createList(span), documentText),
@@ -162,8 +171,8 @@ public class CoNLLUDocumentReader extends DocumentReader {
 	private static Span getSpan(String coveredText, String documentText, int documentOffset) {
 		String pattern = RegExPatterns.escapeCharacterForRegEx(coveredText);
 		/*
-		 * if there are commas in the pattern, then we need to allow for
-		 * optional spaces to occur after the commas; same thing for colons
+		 * if there are commas in the pattern, then we need to allow for optional spaces
+		 * to occur after the commas; same thing for colons
 		 */
 		pattern = pattern.replaceAll(",", ",[ ]?").replaceAll(":", ":[ ]?");
 		Pattern p = Pattern.compile(pattern);
@@ -193,9 +202,8 @@ public class CoNLLUDocumentReader extends DocumentReader {
 			lines.append(line + "\n");
 		}
 		/*
-		 * if there are no more lines in the file and if there are no lines to
-		 * return, then return null indicating there is not another sentence to
-		 * process.
+		 * if there are no more lines in the file and if there are no lines to return,
+		 * then return null indicating there is not another sentence to process.
 		 */
 		if (line == null && lines.toString().isEmpty()) {
 			return null;

@@ -1,3 +1,6 @@
+# Release v0.2.3
+* Fixed a bug in the CoNLLUDocumentReader - it now handles extra whitespace between sentences.
+
 # Release v0.2.2
 
 * Updated all Document Readers to validate spans as they are imported. Specifically, discontinuous spans are validated in two ways. One, if a discontinuous span contains adjacent component spans, e.g. \[35..43\]\[44..52\], or component spans are are separated by only whitespace, then the component spans are combined, e.g. \[35..52\]. Second, if the discontinuous span contains a component span that is nested in another component span, e.g. \[78..92\]\[88..92\], then the nested span is removed, e.g. \[78..92\].

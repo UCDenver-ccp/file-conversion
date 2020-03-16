@@ -36,6 +36,7 @@ package edu.ucdenver.ccp.file.conversion.conllu;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -49,6 +50,7 @@ import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.common.file.FileReaderUtil;
 import edu.ucdenver.ccp.common.io.ClassPathUtil;
 import edu.ucdenver.ccp.common.io.StreamUtil;
+import edu.ucdenver.ccp.common.string.StringUtil;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.mention.ClassMention;
 
@@ -95,6 +97,14 @@ public class CoNLLUDocumentReaderTest {
 				.iterator().next();
 		assertEquals("pressure token should be noun", "NN", pressureCm.getMentionName());
 		assertTrue("pressure token should be the ROOT", pressureCm.getComplexSlotMentions().isEmpty());
+		
+		for (TextAnnotation ta : annotations) {
+			String substring = documentText.substring(ta.getAnnotationSpanStart(), ta.getAnnotationSpanEnd());
+			if (StringUtil.startsWithRegex(substring, "\\s")) {
+				fail("sstarts with space: " + ta.getAggregateSpan() + " -- " + ta.getClassMention().getMentionName() + " -- |" + substring + "|");
+			}
+		}
 	}
-
+	
+	
 }
