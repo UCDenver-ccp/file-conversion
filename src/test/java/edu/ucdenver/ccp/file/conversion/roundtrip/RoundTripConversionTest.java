@@ -133,9 +133,9 @@ public class RoundTripConversionTest {
 	@Test
 	public void testRoundTrip_bionlp() throws IOException {
 		/* write a BioNLP file */
-//		File bionlpFile = folder.newFile("11532192.bionlp");
+		File bionlpFile = folder.newFile("11532192.bionlp");
 
-		File bionlpFile = new File("/tmp/11532192.bionlp");
+//		File bionlpFile = new File("/tmp/11532192.bionlp");
 		new BioNLPDocumentWriter().serialize(td, bionlpFile, encoding);
 
 		/* read the BioNLP file */
@@ -182,13 +182,14 @@ public class RoundTripConversionTest {
 	public void testRoundTrip_knowtator2() throws IOException {
 		/* write a Knowtator2 file */
 		File knowtator2File = folder.newFile("11532192.xml");
+		
 		new Knowtator2DocumentWriter().serialize(td, knowtator2File, encoding);
 
 		/* read the Knowator2 file */
 		TextDocument roundTripTd = new Knowtator2DocumentReader().readDocument("11532192", "PMC", knowtator2File,
 				docTextFile, encoding);
 
-		File knowtator2FileRT = folder.newFile("11532192.xml");
+		File knowtator2FileRT = folder.newFile("11532192.rt.xml");
 		new Knowtator2DocumentWriter().serialize(roundTripTd, knowtator2FileRT, encoding);
 		
 		assertEquals(td.getAnnotations().size(), roundTripTd.getAnnotations().size());
@@ -197,7 +198,10 @@ public class RoundTripConversionTest {
 		List<String> expectedLines = FileReaderUtil.loadLinesFromFile(knowtator2File, encoding);
 		List<String> observedLines = FileReaderUtil.loadLinesFromFile(knowtator2FileRT, encoding);
 
-		assertTrue(FileComparisonUtil.hasExpectedLines(observedLines, expectedLines, null, LineOrder.AS_IN_FILE,
+		assertEquals(expectedLines.size(), observedLines.size());
+		
+		// ANY_ORDER required here as there seems to be some non-deterministic ordering in the output
+		assertTrue(FileComparisonUtil.hasExpectedLines(observedLines, expectedLines, null, LineOrder.ANY_ORDER,
 				ColumnOrder.AS_IN_FILE, LineTrim.OFF, ShowWhiteSpace.OFF));
 		
 		

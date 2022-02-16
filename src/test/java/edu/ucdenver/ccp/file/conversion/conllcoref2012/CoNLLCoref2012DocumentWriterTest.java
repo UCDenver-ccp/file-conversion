@@ -97,9 +97,11 @@ public class CoNLLCoref2012DocumentWriterTest {
 				new DefaultClassMention("Identity Chain"));
 		TextAnnotation carNPAnnot = factory.createAnnotation(8, 11, "car", new DefaultClassMention("Noun Phrase"));
 		TextAnnotation itNPAnnot = factory.createAnnotation(13, 15, "It", new DefaultClassMention("Noun Phrase"));
-		
-		// this use of It is not a non-referential pronoun, but we will add one here just to make sure that it gets removed
-		TextAnnotation itNonreferentialPronounAnnot = factory.createAnnotation(13, 15, "It", new DefaultClassMention(CleanCorefAnnotations.NONREFERENTIAL_PRONOUN));
+
+		// this use of It is not a non-referential pronoun, but we will add one here
+		// just to make sure that it gets removed
+		TextAnnotation itNonreferentialPronounAnnot = factory.createAnnotation(13, 15, "It",
+				new DefaultClassMention(CleanCorefAnnotations.NONREFERENTIAL_PRONOUN));
 
 		/* form an identity chain of 'car' and 'It' */
 		ComplexSlotMention csm = new DefaultComplexSlotMention("Coreferring strings");
@@ -191,8 +193,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * Some annotations may have excess leading or trailing whitespace. This test checks to see that
-	 * it is removed.
+	 * Some annotations may have excess leading or trailing whitespace. This test
+	 * checks to see that it is removed.
 	 * 
 	 * @throws IOException
 	 */
@@ -253,9 +255,10 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * sometimes the NP span start might not match a token exactly. In that case, we should mark the
-	 * overlapping token as part of the coref chain in the CoNLL coref output format. Example: token
-	 * = "post-measurement"; coref chain member = "measurement"
+	 * sometimes the NP span start might not match a token exactly. In that case, we
+	 * should mark the overlapping token as part of the coref chain in the CoNLL
+	 * coref output format. Example: token = "post-measurement"; coref chain member
+	 * = "measurement"
 	 * 
 	 * @throws IOException
 	 */
@@ -277,7 +280,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 		annotations.add(factory.createAnnotation(13, 24, "It is fast.", new DefaultClassMention("sentence")));
 
 		/*
-		 * to simulate a token mismatch, this chain member annotation is "ar" instead of "car"
+		 * to simulate a token mismatch, this chain member annotation is "ar" instead of
+		 * "car"
 		 */
 		TextAnnotation identChainAnnot = factory.createAnnotation(9, 11, "ar",
 				new DefaultClassMention("Identity Chain"));
@@ -317,9 +321,10 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * sometimes the NP span end might not match a token exactly. In that case, we should mark the
-	 * overlapping token as part of the coref chain in the CoNLL coref output format. Example:
-	 * tokens = "C-terminal peptides"; coref chain member = "C-terminal peptide"
+	 * sometimes the NP span end might not match a token exactly. In that case, we
+	 * should mark the overlapping token as part of the coref chain in the CoNLL
+	 * coref output format. Example: tokens = "C-terminal peptides"; coref chain
+	 * member = "C-terminal peptide"
 	 * 
 	 * @throws IOException
 	 */
@@ -344,7 +349,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				new DefaultClassMention("Identity Chain"));
 		TextAnnotation carNPAnnot = factory.createAnnotation(8, 11, "car", new DefaultClassMention("Noun Phrase"));
 		/*
-		 * to simulate a token mismatch, this chain member annotation is "I" instead of "It"
+		 * to simulate a token mismatch, this chain member annotation is "I" instead of
+		 * "It"
 		 */
 		TextAnnotation itNPAnnot = factory.createAnnotation(13, 14, "I", new DefaultClassMention("Noun Phrase"));
 
@@ -381,9 +387,10 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * sometimes the NP span end might not match a token exactly. In that case, we should mark the
-	 * overlapping token as part of the coref chain in the CoNLL coref output format. Example:
-	 * tokens = "C-terminal peptides"; coref chain member = "C-terminal peptide"
+	 * sometimes the NP span end might not match a token exactly. In that case, we
+	 * should mark the overlapping token as part of the coref chain in the CoNLL
+	 * coref output format. Example: tokens = "C-terminal peptides"; coref chain
+	 * member = "C-terminal peptide"
 	 * 
 	 * @throws IOException
 	 */
@@ -408,7 +415,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				new DefaultClassMention("Identity Chain"));
 		TextAnnotation carNPAnnot = factory.createAnnotation(4, 10, "red ca", new DefaultClassMention("Noun Phrase"));
 		/*
-		 * to simulate a token mismatch, this chain member annotation is "I" instead of "It"
+		 * to simulate a token mismatch, this chain member annotation is "I" instead of
+		 * "It"
 		 */
 		TextAnnotation itNPAnnot = factory.createAnnotation(13, 14, "I", new DefaultClassMention("Noun Phrase"));
 
@@ -538,8 +546,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * In cases where there are chains that share member annotations, test that they get merged
-	 * properly, e.g. [A,B,C,D] and [B,E] get merged to [A,B,C,D,E]
+	 * In cases where there are chains that share member annotations, test that they
+	 * get merged properly, e.g. [A,B,C,D] and [B,E] get merged to [A,B,C,D,E]
 	 * 
 	 * @throws IOException
 	 */
@@ -554,8 +562,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				documentTextStream, encoding);
 
 		/*
-		 * The (1) chain has been broken into two pieces, (1) and (6). We will test if these get
-		 * merged properly
+		 * The (1) chain has been broken into two pieces, (1) and (6). We will test if
+		 * these get merged properly
 		 */
 
 		assertEquals(
@@ -628,16 +636,18 @@ public class CoNLLCoref2012DocumentWriterTest {
 		}
 
 		/*
-		 * so we have confirmed at this point that there is are 6 chains, where chains (1) & (6)
-		 * should really be combined b/c they overlap with one chain member. Now let's write the
-		 * chains using the CoNLLCoref2012DocumentWriter and see if the chains get consolidated.
+		 * so we have confirmed at this point that there is are 6 chains, where chains
+		 * (1) & (6) should really be combined b/c they overlap with one chain member.
+		 * Now let's write the chains using the CoNLLCoref2012DocumentWriter and see if
+		 * the chains get consolidated.
 		 */
 
 		File outputFile = folder.newFile("sample.conll");
 		new CoNLLCoref2012DocumentWriter().serialize(td, outputFile, encoding);
 
 		/*
-		 * now load the output file and check that they chains have the correct number of members
+		 * now load the output file and check that they chains have the correct number
+		 * of members
 		 */
 		documentTextStream = ClassPathUtil.getResourceStreamFromClasspath(getClass(), "sample-craft.txt");
 
@@ -716,9 +726,9 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * In cases where there are chains that share member annotations, test that they get merged
-	 * properly. This test tests that a 3-way merge is possible, e.g. [A,B,C,D] and [B,E] and [E,F]
-	 * get merged to [A,B,C,D,E,F]
+	 * In cases where there are chains that share member annotations, test that they
+	 * get merged properly. This test tests that a 3-way merge is possible, e.g.
+	 * [A,B,C,D] and [B,E] and [E,F] get merged to [A,B,C,D,E,F]
 	 * 
 	 * @throws IOException
 	 */
@@ -733,8 +743,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 				documentTextStream, encoding);
 
 		/*
-		 * The (1) chain has been broken into three pieces, (1), (6), and (7). We will test if these
-		 * get merged properly
+		 * The (1) chain has been broken into three pieces, (1), (6), and (7). We will
+		 * test if these get merged properly
 		 */
 
 		assertEquals(
@@ -807,17 +817,19 @@ public class CoNLLCoref2012DocumentWriterTest {
 		}
 
 		/*
-		 * so we have confirmed at this point that there is are 7 chains, where chains (1), (6), &
-		 * (7) should really be combined b/c they overlap with one chain member, i.e. (1) and (6)
-		 * overlap by one member and (6) and (7) overlap by one member. Now let's write the chains
-		 * using the CoNLLCoref2012DocumentWriter and see if the chains get consolidated.
+		 * so we have confirmed at this point that there is are 7 chains, where chains
+		 * (1), (6), & (7) should really be combined b/c they overlap with one chain
+		 * member, i.e. (1) and (6) overlap by one member and (6) and (7) overlap by one
+		 * member. Now let's write the chains using the CoNLLCoref2012DocumentWriter and
+		 * see if the chains get consolidated.
 		 */
 
 		File outputFile = folder.newFile("sample.conll");
 		new CoNLLCoref2012DocumentWriter().serialize(td, outputFile, encoding);
 
 		/*
-		 * now load the output file and check that they chains have the correct number of members
+		 * now load the output file and check that they chains have the correct number
+		 * of members
 		 */
 		documentTextStream = ClassPathUtil.getResourceStreamFromClasspath(getClass(), "sample-craft.txt");
 
@@ -896,7 +908,8 @@ public class CoNLLCoref2012DocumentWriterTest {
 	}
 
 	/**
-	 * Test that annotations with discontinuous spans are properly represented in ident chains
+	 * Test that annotations with discontinuous spans are properly represented in
+	 * ident chains
 	 * 
 	 * @throws IOException
 	 */
@@ -934,12 +947,13 @@ public class CoNLLCoref2012DocumentWriterTest {
 		assertEquals("Expect 8 IDENTITY chain annotations", 8, identCount);
 		assertEquals("Expect 9 discontinuous annotations: 6 noun phrase + 3 ident chain", 9, discontinuousCount);
 
-		// File outputFile = folder.newFile("sample.conll");
-		File outputFile = new File("/tmp/sample.conll");
+		File outputFile = folder.newFile("sample.conll");
+//		File outputFile = new File("/tmp/sample.conll");
 		new CoNLLCoref2012DocumentWriter().serialize(td, outputFile, encoding);
 
 		/*
-		 * now load the output file and check that the chains have the correct number of members
+		 * now load the output file and check that the chains have the correct number of
+		 * members
 		 */
 		documentTextStream = ClassPathUtil.getResourceStreamFromClasspath(getClass(), "sample.discontinuous.txt");
 
