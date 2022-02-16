@@ -11,7 +11,7 @@
     <xs:complexType>
       <xs:sequence>
         <xs:element maxOccurs="unbounded" ref="annotation"/>
-        <xs:element ref="graph-space"/>
+        <xs:element maxOccurs="unbounded" ref="graph-space"/>
       </xs:sequence>
       <xs:attribute name="id" use="required" type="xs:NMTOKEN"/>
       <xs:attribute name="text-file" use="required" type="xs:NMTOKEN"/>

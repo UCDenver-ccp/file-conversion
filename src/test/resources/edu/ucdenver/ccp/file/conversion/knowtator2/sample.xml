@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<knowtator-project>
+    <document id="11319941" text-file="11319941.txt">
+        <annotation annotator="Default" id="CRAFT_aggregate_ontology_Instance_20411" motivation="" type="identity">
+            <class id="http://www.owl-ontologies.com/unnamed.owl#NCBITaxon_10088" label="NCBITaxon_10088"/>
+            <span end="35" id="11319941-27029" start="30">mouse</span>
+        </annotation>
+        <annotation annotator="Default" id="CRAFT_aggregate_ontology_Instance_21127" motivation="" type="identity">
+            <class id="http://www.owl-ontologies.com/unnamed.owl#UBERON_0002435" label="UBERON_0002435"/>
+            <span end="44" id="11319941-27031" start="36">striatum</span>
+        </annotation>
+        <annotation annotator="Default" id="CRAFT_aggregate_ontology_Instance_20911" motivation="" type="identity">
+            <class id="http://www.owl-ontologies.com/unnamed.owl#SO_EXT_0000771" label="SO_EXT_0000771"/>
+            <span end="62" id="11319941-27033" start="58">QTLs</span>
+        </annotation>
+        <annotation annotator="Default" id="CRAFT_aggregate_ontology_Instance_21131" motivation="" type="identity">
+            <class id="http://www.owl-ontologies.com/unnamed.owl#CL_0000540" label="CL_0000540"/>
+            <span end="89" id="11319941-27035" start="83">neuron</span>
+        </annotation>
+        <annotation annotator="Default" id="CRAFT_aggregate_ontology_Instance_20307" motivation="" type="identity">
+            <class id="http://www.owl-ontologies.com/unnamed.owl#GO_EXT_biological_movement_or_translocation_process" label="GO_EXT_biological_movement_or_translocation_process"/>
+            <span end="173" id="11319941-27039" start="168">motor</span>
+        </annotation>
+        <annotation annotator="Default" id="11319941-350901" motivation="" type="identity">
+            <class id="http://www.owl-ontologies.com/unnamed.owl#CCP:process_or_attribute_or_effect_of_activity" label="process_or_attribute_or_effect_of_activity"/>
+            <span end="182" id="11319941-350902" start="174">activity</span>
+        </annotation>
+        <graph-space id="GS1">
+            <vertex annotation="CRAFT_aggregate_ontology_Instance_21127" id="node_24" x="150.0" y="20.421875"/>
+            <vertex annotation="CRAFT_aggregate_ontology_Instance_20411" id="node_22" x="120.0" y="150.265625"/>
+            <vertex annotation="CRAFT_aggregate_ontology_Instance_20911" id="11319941-323752" x="280.0" y="210.0"/>
+            <vertex annotation="CRAFT_aggregate_ontology_Instance_21131" id="11319941-323753" x="290.0" y="330.0"/>
+            <triple annotator="Default" id="edge_1" motivation="" object="node_22" polarity="positive" property="http://purl.obolibrary.org/obo/involves_or_bears_or_is_attribute_of_positioning_at_or_derivation_from" quantifier="some" subject="node_24" value=""/>
+            <triple annotator="Default" id="11319941-323757" motivation="" object="11319941-323753" polarity="positive" property="http://purl.obolibrary.org/obo/causally_effects_or_influences_variation_of" quantifier="some" subject="11319941-323752" value=""/>
+        </graph-space>
+        <graph-space id="GS2">
+            <vertex annotation="CRAFT_aggregate_ontology_Instance_20307" id="11319941-350786" x="240.0" y="240.0"/>
+            <vertex annotation="11319941-350901" id="11319941-350903" x="270.0" y="370.0"/>
+            <triple annotator="Default" id="11319941-351375"
+	motivation="" object="11319941-350786" polarity="positive"
+	property="http://www.owl-ontologies.com/unnamed.owl#is_process_or_attribute_or_effect_of_activity_of_or_in_bringing_about"
+	quantifier="some" subject="11319941-350903" value="" />
+        </graph-space>
+        </document>
+</knowtator-project>
