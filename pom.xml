@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>edu.ucdenver.ccp</groupId>
 	<artifactId>file-conversion</artifactId>
-	<version>0.2.3</version>
+	<version>0.3.0</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -106,6 +106,9 @@
 							<goal>xjc</goal>
 						</goals>
 						<configuration>
+							<xjbSources>
+								<xjbSource>src/main/xsd/knowtator2-binding.xjb</xjbSource>
+							</xjbSources>
 							<sources>
 								<source>src/main/xsd/knowtator2.xsd</source>
 							</sources>

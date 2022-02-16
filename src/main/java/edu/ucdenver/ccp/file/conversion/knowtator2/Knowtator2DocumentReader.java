@@ -74,6 +74,8 @@ public class Knowtator2DocumentReader extends DocumentReader {
 	@Override
 	public TextDocument readDocument(String sourceId, String sourceDb, InputStream inputStream,
 			InputStream documentTextStream, CharacterEncoding encoding) throws IOException {
+//		return getMentionGraphs(sourceId, sourceDb, inputStream, documentTextStream, encoding);
+
 		String documentText = StreamUtil.toString(new InputStreamReader(documentTextStream, encoding.getDecoder()));
 		TextDocument td = new TextDocument(sourceId, sourceDb, documentText);
 		try {
@@ -83,6 +85,7 @@ public class Knowtator2DocumentReader extends DocumentReader {
 		} catch (XMLStreamException | JAXBException e) {
 			throw new IOException("Error while reading Knowtator2 file.", e);
 		}
+
 		return td;
 	}
 
@@ -115,14 +118,14 @@ public class Knowtator2DocumentReader extends DocumentReader {
 				TextAnnotationFactory factory = TextAnnotationFactory.createFactoryWithDefaults(documentId.toString());
 				Map<String, TextAnnotation> idToAnnotMap = new HashMap<String, TextAnnotation>();
 
-				List<Annotation> annotations = d.getAnnotation();
+				List<Annotation> annotations = d.getAnnotations();
 				for (Annotation annot : annotations) {
 					edu.ucdenver.ccp.knowtator2.Class clazz = annot.getClazz();
 					String annotType = clazz.getId();
 					@SuppressWarnings("unused")
 					String annotTypeLabel = clazz.getLabel();
 					String id = annot.getId();
-					List<Span> spans = annot.getSpan();
+					List<Span> spans = annot.getSpen();
 
 					String coveredText = spans.get(0).getContent();
 					for (int i = 1; i < spans.size(); i++) {
@@ -138,38 +141,174 @@ public class Knowtator2DocumentReader extends DocumentReader {
 				}
 
 				Map<String, String> vertexToAnnotIdMap = new HashMap<String, String>();
-				GraphSpace graphSpace = d.getGraphSpace();
-				if (graphSpace != null) {
-					for (Vertex vertex : graphSpace.getVertex()) {
-						String vertexId = vertex.getId();
-						String annotationId = vertex.getAnnotation();
-						vertexToAnnotIdMap.put(vertexId, annotationId);
-					}
-
-					for (Triple triple : graphSpace.getTriple()) {
-						String subjectVertexId = triple.getSubject();
-						String property = triple.getProperty();
-						String objectVertexId = triple.getObject();
-						String value = triple.getValue();
-						String quantifier = triple.getQuantifier();
-
-						if (!quantifier.isEmpty() || !value.isEmpty()) {
-							throw new IllegalStateException(
-									"This parser not yet able to handle quantifiers and/or values. Further development needed.");
+				List<GraphSpace> graphSpaces = d.getGraphSpaces();
+				if (graphSpaces != null && !graphSpaces.isEmpty()) {
+					for (GraphSpace graphSpace : graphSpaces) {
+						for (Vertex vertex : graphSpace.getVertices()) {
+							String vertexId = vertex.getId();
+							String annotationId = vertex.getAnnotation();
+							vertexToAnnotIdMap.put(vertexId, annotationId);
 						}
 
-						TextAnnotation subjTa = idToAnnotMap.get(vertexToAnnotIdMap.get(subjectVertexId));
-						String relationType = property;
-						TextAnnotation objTa = idToAnnotMap.get(vertexToAnnotIdMap.get(objectVertexId));
+						for (Triple triple : graphSpace.getTriples()) {
+							String subjectVertexId = triple.getSubject();
+							String property = triple.getProperty();
+							String objectVertexId = triple.getObject();
+							String value = triple.getValue();
+							String quantifier = triple.getQuantifier();
 
-						DocumentReader.createAnnotationRelation(subjTa, objTa, relationType);
+							if (!quantifier.isEmpty() || !value.isEmpty()) {
+								throw new IllegalStateException(
+										"This parser not yet able to handle quantifiers and/or values. Further development needed.");
+							}
+
+							TextAnnotation subjTa = idToAnnotMap.get(vertexToAnnotIdMap.get(subjectVertexId));
+							String relationType = property;
+							TextAnnotation objTa = idToAnnotMap.get(vertexToAnnotIdMap.get(objectVertexId));
+
+							DocumentReader.createAnnotationRelation(subjTa, objTa, relationType);
+						}
 					}
-					annotationsToReturn.addAll(idToAnnotMap.values());
 				}
+				annotationsToReturn.addAll(idToAnnotMap.values());
 			}
 		}
-
+ 
 		return annotationsToReturn;
 	}
+
+//	public TextDocument getMentionGraphs(String sourceId, String sourceDb, File knowtator2File, File txtFile,
+//			CharacterEncoding encoding) throws IOException {
+//		return getMentionGraphs(sourceId, sourceDb, new FileInputStream(knowtator2File), new FileInputStream(txtFile),
+//				encoding);
+//	}
+//
+//	public TextDocument getMentionGraphs(String sourceId, String sourceDb, InputStream inputStream,
+//			InputStream documentTextStream, CharacterEncoding encoding) throws IOException {
+//		String documentText = StreamUtil.toString(new InputStreamReader(documentTextStream, encoding.getDecoder()));
+//		TextDocument td = new TextDocument(sourceId, sourceDb, documentText);
+//		try {
+//			List<MentionGraph> mentionGraphs = getMentionGraphs(td, inputStream);
+//
+//			DocumentReaderUtil.validateSpans(td.getAnnotations(), documentText, sourceId);
+//			td.setMentionGraphs(mentionGraphs);
+//		} catch (XMLStreamException | JAXBException e) {
+//			throw new IOException("Error while reading Knowtator2 file.", e);
+//		}
+//		return td;
+//	}
+//
+//	public static List<MentionGraph> getMentionGraphs(TextDocument td, InputStream knowtator2Stream)
+//			throws XMLStreamException, JAXBException, FileNotFoundException {
+//
+//		Class<?> entryClass = KnowtatorProject.class;
+//		JAXBContext ctx = JAXBContext.newInstance(entryClass);
+//		Unmarshaller um = ctx.createUnmarshaller();
+//		XMLInputFactory xmlif = XMLInputFactory.newInstance();
+//		XMLEventReader xmler = xmlif.createXMLEventReader(knowtator2Stream);
+//		EventFilter filter = new EventFilter() {
+//			public boolean accept(XMLEvent event) {
+//				return event.isStartElement();
+//			}
+//		};
+//		XMLEventReader xmlfer = xmlif.createFilteredReader(xmler, filter);
+//		// StartElement e = (StartElement) xmlfer.nextEvent();
+//
+//		List<MentionGraph> mentionGraphs = new ArrayList<MentionGraph>();
+//
+//		while (xmlfer.peek() != null) {
+//			JAXBElement<?> unmarshalledElement = um.unmarshal(xmler, entryClass);
+//			Object o = unmarshalledElement.getValue();
+//
+//			if (KnowtatorProject.class.isInstance(o)) {
+//				KnowtatorProject project = (KnowtatorProject) o;
+//				Document d = project.getDocument();
+//				String documentId = d.getId();
+//				TextAnnotationFactory factory = TextAnnotationFactory.createFactoryWithDefaults(documentId.toString());
+//				Map<String, TextAnnotation> idToAnnotMap = new HashMap<String, TextAnnotation>();
+//
+//				List<Annotation> annotations = d.getAnnotations();
+//				for (Annotation annot : annotations) {
+//					edu.ucdenver.ccp.knowtator2.Class clazz = annot.getClazz();
+//					String annotType = clazz.getId();
+//					@SuppressWarnings("unused")
+//					String annotTypeLabel = clazz.getLabel();
+//					String id = annot.getId();
+//					List<Span> spans = annot.getSpen();
+//
+//					String coveredText = spans.get(0).getContent();
+//					for (int i = 1; i < spans.size(); i++) {
+//						coveredText += (" " + spans.get(i).getContent());
+//					}
+//					TextAnnotation ta = factory.createAnnotation(spans.get(0).getStart().intValue(),
+//							spans.get(0).getEnd().intValue(), coveredText, new DefaultClassMention(annotType));
+//					for (int i = 1; i < spans.size(); i++) {
+//						ta.addSpan(new edu.ucdenver.ccp.nlp.core.annotation.Span(spans.get(i).getStart().intValue(),
+//								spans.get(i).getEnd().intValue()));
+//					}
+//					idToAnnotMap.put(id, ta);
+//					td.addAnnotation(ta);
+//				}
+//
+//				Map<String, String> vertexToAnnotIdMap = new HashMap<String, String>();
+//				List<GraphSpace> graphSpaces = d.getGraphSpaces();
+//				if (graphSpaces != null) {
+//					for (GraphSpace graphSpace : graphSpaces) {
+//						MentionGraph mg = new MentionGraph(graphSpace.getId());
+//
+//						/* link vertex ids to annotation ids */
+//						for (Vertex vertex : graphSpace.getVertices()) {
+//							String vertexId = vertex.getId();
+//							String annotationId = vertex.getAnnotation();
+//							vertexToAnnotIdMap.put(vertexId, annotationId);
+//						}
+//
+//						for (Triple triple : graphSpace.getTriples()) {
+//							String subjectVertexId = triple.getSubject();
+//							String property = triple.getProperty();
+//							String objectVertexId = triple.getObject();
+//							String value = triple.getValue();
+//							String quantifier = triple.getQuantifier();
+//
+////						!quantifier.isEmpty() ||
+//							if (!value.isEmpty()) {
+////								throw new IllegalStateException(
+////										"This parser not yet able to handle quantifiers and/or values. Further development needed.");
+////								System.out.println("Non empty value not handled: " + value);
+//							}
+//
+//							String subjectAnnotId = vertexToAnnotIdMap.get(subjectVertexId);
+//							String objectAnnotId = vertexToAnnotIdMap.get(objectVertexId);
+//
+//							TextAnnotation subjTa = idToAnnotMap.get(subjectAnnotId);
+//							TextAnnotation objTa = idToAnnotMap.get(objectAnnotId);
+//
+//							MentionGraphNode sourceNode = null;
+//							if (!mg.containsNode(subjectVertexId)) {
+//								sourceNode = mg.addNode(subjectVertexId, subjTa);
+//							} else {
+//								sourceNode = mg.getNode(subjectVertexId);
+//							}
+//
+//							MentionGraphNode targetNode = null;
+//							if (!mg.containsNode(objectVertexId)) {
+//								targetNode = mg.addNode(objectVertexId, objTa);
+//							} else {
+//								targetNode = mg.getNode(objectVertexId);
+//							}
+//
+//							mg.addEdge(triple.getId(), property, sourceNode, targetNode);
+//
+////							DocumentReader.createAnnotationRelation(subjTa, objTa, relationType);
+//						}
+//						if (mg.getNodes().size() > 0) {
+//							mentionGraphs.add(mg);
+//						}
+//					}
+//				}
+//			}
+//		}
+//		return mentionGraphs;
+//	}
 
 }

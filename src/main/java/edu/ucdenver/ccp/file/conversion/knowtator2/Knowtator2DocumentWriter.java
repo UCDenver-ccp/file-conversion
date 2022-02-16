@@ -44,8 +44,10 @@ import java.util.List;
 import java.util.Map;
 
 import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import javax.xml.namespace.QName;
 
 import edu.ucdenver.ccp.common.file.CharacterEncoding;
 import edu.ucdenver.ccp.file.conversion.DocumentWriter;
@@ -54,9 +56,10 @@ import edu.ucdenver.ccp.knowtator2.Annotation;
 import edu.ucdenver.ccp.knowtator2.Document;
 import edu.ucdenver.ccp.knowtator2.GraphSpace;
 import edu.ucdenver.ccp.knowtator2.KnowtatorProject;
+import edu.ucdenver.ccp.knowtator2.ObjectFactory;
+import edu.ucdenver.ccp.knowtator2.Span;
 import edu.ucdenver.ccp.knowtator2.Triple;
 import edu.ucdenver.ccp.knowtator2.Vertex;
-import edu.ucdenver.ccp.nlp.core.annotation.Span;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.mention.ClassMention;
 import edu.ucdenver.ccp.nlp.core.mention.ComplexSlotMention;
@@ -66,9 +69,9 @@ public class Knowtator2DocumentWriter extends DocumentWriter {
 	@Override
 	public void serialize(TextDocument td, OutputStream outputStream, CharacterEncoding encoding) throws IOException {
 
-		KnowtatorProject project = new KnowtatorProject();
+		KnowtatorProject project = new ObjectFactory().createKnowtatorProject();
 		String documentId = td.getSourceid();
-		Document d = new Document();
+		Document d = new ObjectFactory().createDocument();
 		d.setId(documentId);
 		d.setTextFile(documentId + ".txt");
 
@@ -90,35 +93,35 @@ public class Knowtator2DocumentWriter extends DocumentWriter {
 
 			String annotationId = annot.getAnnotationID();
 			/*
-			 * use the predefined annotation id if there is one, otherwise
-			 * create a unique identifier
+			 * use the predefined annotation id if there is one, otherwise create a unique
+			 * identifier
 			 */
 			annotationId = (annotationId != null && !annotationId.trim().isEmpty()) ? annotationId
 					: Integer.toString(annotationCount++);
 
 			annotToIdMap.put(annot, annotationId);
 
-			Annotation annotation = new Annotation();
+			Annotation annotation = new ObjectFactory().createAnnotation();
 			annotation.setAnnotator(annot.getAnnotator().getName());
 			annotation.setId(annotationId);
 			annotation.setType("identity");
 
-			edu.ucdenver.ccp.knowtator2.Class clazz = new edu.ucdenver.ccp.knowtator2.Class();
+			edu.ucdenver.ccp.knowtator2.Class clazz = new ObjectFactory().createClass();
 			clazz.setId(annot.getClassMention().getMentionName());
 			clazz.setLabel(annot.getClassMention().getMentionName());
 			annotation.setClazz(clazz);
 
-			for (Span span : annot.getSpans()) {
-				edu.ucdenver.ccp.knowtator2.Span knowtatorSpan = new edu.ucdenver.ccp.knowtator2.Span();
+			for (edu.ucdenver.ccp.nlp.core.annotation.Span span : annot.getSpans()) {
+				Span knowtatorSpan = new ObjectFactory().createSpan();
 				knowtatorSpan.setContent(td.getText().substring(span.getSpanStart(), span.getSpanEnd()));
 				knowtatorSpan.setEnd(new BigInteger(Integer.toString(span.getSpanEnd())));
 				knowtatorSpan.setStart(new BigInteger(Integer.toString(span.getSpanStart())));
 				knowtatorSpan.setId(documentId + "-" + spanCount++);
 
-				annotation.getSpan().add(knowtatorSpan);
+				annotation.getSpen().add(knowtatorSpan);
 			}
 
-			d.getAnnotation().add(annotation);
+			d.getAnnotations().add(annotation);
 		}
 
 		GraphSpace gs = new GraphSpace();
@@ -136,7 +139,7 @@ public class Knowtator2DocumentWriter extends DocumentWriter {
 				Vertex v = new Vertex();
 				v.setAnnotation(annotId);
 				v.setId(vertexId);
-				gs.getVertex().add(v);
+				gs.getVertices().add(v);
 			}
 
 			/* Add Triples */
@@ -151,7 +154,7 @@ public class Knowtator2DocumentWriter extends DocumentWriter {
 						for (ClassMention cm : csm.getClassMentions()) {
 							TextAnnotation targetAnnot = cm.getTextAnnotation();
 							String targetAnnotId = annotToIdMap.get(targetAnnot);
-							Triple t = new Triple();
+							Triple t = new ObjectFactory().createTriple();
 							t.setAnnotator(annot.getAnnotator().getName());
 							t.setId("edge_" + tripleCount++);
 							t.setSubject(annotIdToVertexIdMap.get(sourceAnnotId));
@@ -159,7 +162,7 @@ public class Knowtator2DocumentWriter extends DocumentWriter {
 							t.setObject(annotIdToVertexIdMap.get(targetAnnotId));
 							t.setQuantifier("");
 							t.setValue("");
-							gs.getTriple().add(t);
+							gs.getTriples().add(t);
 						}
 					}
 				}
@@ -167,15 +170,16 @@ public class Knowtator2DocumentWriter extends DocumentWriter {
 		}
 
 		// System.out.println("TRIPLE COUNT: " + gs.getTriple().size());
-
-		d.setGraphSpace(gs);
+		d.getGraphSpaces().add(gs);
 
 		/* write the Document as XML */
 		try {
-			JAXBContext jaxbContext = JAXBContext.newInstance(KnowtatorProject.class);
+			JAXBElement<KnowtatorProject> jaxbElement = new JAXBElement<KnowtatorProject>(
+					new QName("", "knowtator-project"), KnowtatorProject.class, project);
+			JAXBContext jaxbContext = JAXBContext.newInstance(project.getClass());
 			Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
 			jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-			jaxbMarshaller.marshal(project, outputStream);
+			jaxbMarshaller.marshal(jaxbElement, outputStream);
 		} catch (JAXBException e) {
 			throw new IOException(e);
 		}
