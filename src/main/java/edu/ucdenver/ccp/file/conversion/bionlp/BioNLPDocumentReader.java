@@ -37,9 +37,12 @@ package edu.ucdenver.ccp.file.conversion.bionlp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -56,6 +59,8 @@ import edu.ucdenver.ccp.nlp.core.annotation.Span;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotation;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationFactory;
 import edu.ucdenver.ccp.nlp.core.annotation.TextAnnotationUtil;
+import edu.ucdenver.ccp.nlp.core.mention.ClassMention;
+import edu.ucdenver.ccp.nlp.core.mention.ComplexSlotMention;
 import edu.ucdenver.ccp.nlp.core.mention.impl.DefaultClassMention;
 
 public class BioNLPDocumentReader extends DocumentReader {
@@ -95,10 +100,40 @@ public class BioNLPDocumentReader extends DocumentReader {
 		/* add annotations to document */
 
 		Collection<TextAnnotation> annotations = annotIdToAnnotMap.values();
+		annotations = elevateSlotFillers(annotations);
+
 		DocumentReaderUtil.validateSpans(annotations, documentText, sourceId);
 		td.addAnnotations(annotations);
 
 		return td;
+	}
+
+	/**
+	 * Sometimes there are annotations that are slot fillers that don't end up being
+	 * in the original list. This method elevates any slot filler annotation to the
+	 * top level.
+	 * 
+	 * @param annots
+	 * @return
+	 */
+	private static List<TextAnnotation> elevateSlotFillers(Collection<? extends TextAnnotation> annots) {
+		Set<TextAnnotation> elevatedAnnots = new HashSet<TextAnnotation>();
+
+		for (TextAnnotation annot : annots) {
+			elevatedAnnots.add(annot);
+			Collection<ComplexSlotMention> csms = annot.getClassMention().getComplexSlotMentions();
+			if (csms != null && csms.size() > 0) {
+				for (ComplexSlotMention csm : csms) {
+					for (ClassMention cm : csm.getClassMentions()) {
+						elevatedAnnots.add(cm.getTextAnnotation());
+					}
+				}
+			}
+		}
+
+		List<TextAnnotation> sortedAnnots = new ArrayList<TextAnnotation>(elevatedAnnots);
+		Collections.sort(sortedAnnots, TextAnnotation.BY_SPAN());
+		return sortedAnnots;
 	}
 
 	public void processRelationAnnotations(Set<String> relationLines, CharacterEncoding encoding,
