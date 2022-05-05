@@ -150,6 +150,8 @@ public class RoundTripConversionTest {
 		List<String> expectedLines = FileReaderUtil.loadLinesFromFile(origConlluFile, encoding);
 		List<String> observedLines = FileReaderUtil.loadLinesFromFile(conlluFile, encoding);
 
+		assertEquals(expectedLines.size(), observedLines.size());
+		
 		assertTrue(FileComparisonUtil.hasExpectedLines(observedLines, expectedLines, null, LineOrder.AS_IN_FILE,
 				ColumnOrder.AS_IN_FILE, LineTrim.OFF, ShowWhiteSpace.OFF));
 
@@ -248,6 +250,8 @@ public class RoundTripConversionTest {
 		List<String> expectedLines = FileReaderUtil.loadLinesFromFile(origConlluFile, encoding);
 		List<String> observedLines = FileReaderUtil.loadLinesFromFile(conlluFile, encoding);
 
+		assertEquals(expectedLines.size(), observedLines.size());
+		
 		assertTrue(FileComparisonUtil.hasExpectedLines(observedLines, expectedLines, null, LineOrder.AS_IN_FILE,
 				ColumnOrder.AS_IN_FILE, LineTrim.OFF, ShowWhiteSpace.OFF));
 	}
