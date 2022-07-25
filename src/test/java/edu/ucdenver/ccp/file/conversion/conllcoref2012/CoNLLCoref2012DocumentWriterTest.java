@@ -126,7 +126,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t3\tcar\tNN\t-\t-\t-\t-\t-\t-\t-\t(1)\n" + "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "\n" + "12345\t0\t1\tIt\tPRN\t-\t-\t-\t-\t-\t-\t-\t(1)\n"
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
-				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
+				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n#end document\n";
 
 		// System.out.println("SER:\n" + serializedConllText + ";;;");
 		// System.out.println("EXP:\n" + expectedConllText + ";;;");
@@ -182,7 +182,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t3\tcar\tNN\t-\t-\t-\t-\t-\t-\t-\t(1)|1)\n" + "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "\n" + "12345\t0\t1\tIt\tPRN\t-\t-\t-\t-\t-\t-\t-\t(1)\n"
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
-				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
+				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n#end document\n";
 
 		// System.out.println("SER:\n" + serializedConllText + ";;;");
 		// System.out.println("EXP:\n" + expectedConllText + ";;;");
@@ -244,7 +244,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t3\tcar\tNN\t-\t-\t-\t-\t-\t-\t-\t(1)\n" + "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "\n" + "12345\t0\t1\tIt\tPRN\t-\t-\t-\t-\t-\t-\t-\t(1)\n"
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
-				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
+				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n#end document\n";
 
 		// System.out.println("SER:\n" + serializedConllText + ";;;");
 		// System.out.println("EXP:\n" + expectedConllText + ";;;");
@@ -310,7 +310,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t3\tcar\tNN\t-\t-\t-\t-\t-\t-\t-\t(1)\n" + "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "\n" + "12345\t0\t1\tIt\tPRN\t-\t-\t-\t-\t-\t-\t-\t(1)\n"
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
-				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
+				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n#end document\n";
 
 		// System.out.println("SER:\n" + serializedConllText + ";;;");
 		// System.out.println("EXP:\n" + expectedConllText + ";;;");
@@ -376,7 +376,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t3\tcar\tNN\t-\t-\t-\t-\t-\t-\t-\t(1)\n" + "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "\n" + "12345\t0\t1\tIt\tPRN\t-\t-\t-\t-\t-\t-\t-\t(1)\n"
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
-				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
+				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n#end document\n";
 
 		// System.out.println("SER:\n" + serializedConllText + ";;;");
 		// System.out.println("EXP:\n" + expectedConllText + ";;;");
@@ -442,7 +442,7 @@ public class CoNLLCoref2012DocumentWriterTest {
 				+ "12345\t0\t3\tcar\tNN\t-\t-\t-\t-\t-\t-\t-\t1)\n" + "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n"
 				+ "\n" + "12345\t0\t1\tIt\tPRN\t-\t-\t-\t-\t-\t-\t-\t(1)\n"
 				+ "12345\t0\t2\tis\tVB\t-\t-\t-\t-\t-\t-\t-\t-\n" + "12345\t0\t3\tfast\tJJ\t-\t-\t-\t-\t-\t-\t-\t-\n"
-				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n";
+				+ "12345\t0\t4\t.\t.\t-\t-\t-\t-\t-\t-\t-\t-\n" + "\n#end document\n";
 
 		// System.out.println("SER:\n" + serializedConllText + ";;;");
 		// System.out.println("EXP:\n" + expectedConllText + ";;;");

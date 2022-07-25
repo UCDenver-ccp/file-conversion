@@ -109,6 +109,10 @@ public class CoNLLCoref2012DocumentReader extends DocumentReader {
 		String sentenceLines;
 		while ((sentenceLines = CoNLLUDocumentReader.getLinesForNextSentence(conllUReader)) != null) {
 
+			if (sentenceLines.startsWith("#end document")) {
+				continue;
+			}
+			
 			int sentenceStart = documentOffset;
 			Map<Integer, TextAnnotation> tokenNumToAnnotMap = new HashMap<Integer, TextAnnotation>();
 

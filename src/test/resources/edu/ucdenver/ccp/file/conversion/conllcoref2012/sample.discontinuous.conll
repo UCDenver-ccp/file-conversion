@@ -1,3 +1,4 @@
+#begin document
 48141	0	1	Approximately	RB	-	-	-	-	-	-	-	-
 48141	0	2	half	NN	-	-	-	-	-	-	-	-
 48141	0	3	of	IN	-	-	-	-	-	-	-	-
@@ -150,3 +151,5 @@
 48141	0	24	/	HYPH	-	-	-	-	-	-	-	-
 48141	0	25	J	NN	-	-	-	-	-	-	-	74b)
 48141	0	26	.	.	-	-	-	-	-	-	-	-
+
+#end document

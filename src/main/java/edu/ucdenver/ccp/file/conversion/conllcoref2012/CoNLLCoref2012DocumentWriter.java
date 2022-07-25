@@ -299,6 +299,7 @@ public class CoNLLCoref2012DocumentWriter extends DocumentWriter {
 					writer.write("\n");
 				}
 			}
+			writer.write("#end document\n");
 		}
 
 	}
